@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
+@import 'tailwindcss';
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+@theme {
+  /* Brand palette */
+  --color-navy: #0B3D66;
+  --color-navy-dark: #082e4f;
+  --color-navy-light: #e8f0fa;
+  --color-saffron: #FF7A00;
+  --color-saffron-dark: #e06a00;
+  --color-saffron-light: #fff3e6;
+  /* Neutrals */
+  --color-bg: #F7F9FB;
+  --color-surface: #FFFFFF;
+  --color-border: #E2E8F0;
+  --color-text: #1A1F2B;
+  --color-text-secondary: #5C6B7A;
+  /* Semantic */
+  --color-success: #2E9E5B;
+  --color-warning: #D9822B;
+  --color-error: #D64545;
+  /* Source badges */
+  --color-igot: #0ea5e9;
+  --color-nssta: #7c3aed;
+  --font-sans: "Inter", system-ui, sans-serif;
+  --font-serif: "DM Serif Display", Georgia, serif;
+  --font-mono: "DM Mono", monospace;
+}
+
+* {
+  scrollbar-width: none;
+}
+*::-webkit-scrollbar {
+  display: none;
+}
+*:hover {
+  scrollbar-width: thin;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #F7F9FB;
+}

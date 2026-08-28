@@ -1,0 +1,10 @@
+{
+  "description": "Empowering government employees with a comprehensive training platform that offers personalized learning paths, competency assessments, and progress tracking.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
