@@ -360,8 +360,8 @@ function Sidebar({
 
       {mobileOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex">
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs" onClick={onMobileClose} />
-          <div className="relative z-10 h-full">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity duration-300" onClick={onMobileClose} />
+          <div className="relative z-10 h-full w-[280px] max-w-[85vw] shadow-2xl animate-in slide-in-from-left duration-300">
             <SidebarContent current={current} onNav={onNav} collapsed={false} setCollapsed={() => {}} onClose={onMobileClose} />
           </div>
         </div>
@@ -392,11 +392,12 @@ function Topbar({
   const notifs = getNotifications();
 
   return (
-    <header className="h-14 bg-white border-b border-gray-100 flex items-center px-4 md:px-6 gap-3 shrink-0 relative z-20 justify-between">
-      <div className="flex items-center gap-3">
+    <header className="h-14 bg-white border-b border-gray-100 flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-3 shrink-0 relative z-20 justify-between">
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0">
         <button
           onClick={onMenuOpen}
-          className="md:hidden w-9 h-9 flex items-center justify-center rounded-lg hover:bg-gray-100 transition-colors text-gray-500"
+          className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors text-gray-700 shrink-0 cursor-pointer border border-gray-200"
+          aria-label="Open Navigation Menu"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
             <path d="M4 6h16M4 12h16M4 18h16" strokeLinecap="round" strokeLinejoin="round" />
@@ -407,51 +408,57 @@ function Topbar({
           <span className="text-xs font-bold text-[#0B3D66] bg-blue-50 px-2.5 py-1 rounded-lg">
             StatSkill AI
           </span>
-          <span className="text-xs text-gray-500 font-medium truncate max-w-[220px]">
+          <span className="text-xs text-gray-500 font-medium truncate max-w-[200px]">
             {profile.department}
           </span>
         </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-3">
-        {/* Role Switcher */}
-        <div className="flex items-center bg-gray-100 p-0.5 rounded-xl text-xs font-bold">
+      <div className="flex items-center gap-1.5 sm:gap-3 min-w-0">
+        {/* Responsive Role Switcher */}
+        <div className="flex items-center bg-gray-100 p-0.5 rounded-xl text-xs font-bold shrink-0">
           <button
             onClick={() => onRoleChange("learner")}
-            className={`px-2.5 py-1 rounded-lg transition-all ${
+            title="Official Cadre"
+            className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
               profile.role === "learner"
                 ? "bg-[#0B3D66] text-white shadow-xs"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            👤 Official
+            <span>👤</span>
+            <span className="hidden sm:inline">Official</span>
           </button>
           <button
             onClick={() => onRoleChange("trainer")}
-            className={`px-2.5 py-1 rounded-lg transition-all ${
+            title="Trainer Studio"
+            className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
               profile.role === "trainer"
                 ? "bg-purple-700 text-white shadow-xs"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            🎓 Trainer
+            <span>🎓</span>
+            <span className="hidden sm:inline">Trainer</span>
           </button>
           <button
             onClick={() => onRoleChange("admin")}
-            className={`px-2.5 py-1 rounded-lg transition-all ${
+            title="Ministry Admin"
+            className={`px-2 sm:px-2.5 py-1 rounded-lg transition-all flex items-center gap-1 ${
               profile.role === "admin"
                 ? "bg-amber-600 text-white shadow-xs"
                 : "text-gray-600 hover:text-gray-900"
             }`}
           >
-            👑 Admin
+            <span>👑</span>
+            <span className="hidden sm:inline">Admin</span>
           </button>
         </div>
 
         {/* Groq Cloud AI Engine Status */}
         <div
-          className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs"
-          title="Groq Cloud LLaMA 3.3 AI Connected via .env"
+          className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs shrink-0"
+          title="Groq Cloud Active"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
           <span>⚡ Groq AI Active</span>
@@ -460,7 +467,7 @@ function Topbar({
         {/* iGOT Adapter Status Badge */}
         <button
           onClick={() => setIgotModalOpen(true)}
-          className="hidden lg:flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-orange-50 text-[#FF7A00] border border-orange-200 hover:bg-orange-100 transition-all cursor-pointer"
+          className="hidden xl:flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-orange-50 text-[#FF7A00] border border-orange-200 hover:bg-orange-100 transition-all cursor-pointer shrink-0"
           title="iGOT Karmayogi (Sunbird) Integration Adapter"
         >
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -468,7 +475,7 @@ function Topbar({
         </button>
 
         {/* Notifications Button */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <button
             onClick={() => setNotifsOpen(!notifsOpen)}
             className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-xs relative cursor-pointer"
@@ -481,7 +488,7 @@ function Topbar({
           </button>
 
           {notifsOpen && (
-            <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-gray-100 p-3 space-y-2 z-50 text-xs animate-in zoom-in-95">
+            <div className="fixed sm:absolute top-14 sm:top-full right-2 sm:right-0 mt-2 w-[calc(100vw-1rem)] sm:w-72 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 p-3 space-y-2 z-50 text-xs animate-in zoom-in-95">
               <div className="flex justify-between font-bold text-gray-800 pb-1 border-b border-gray-100">
                 <span>Notifications</span>
                 <span className="text-[10px] text-gray-400">3 Alerts</span>
@@ -500,12 +507,12 @@ function Topbar({
         </div>
 
         {/* Multilingual Switcher */}
-        <div className="flex items-center bg-gray-100 rounded-xl p-0.5 text-xs font-bold">
+        <div className="flex items-center bg-gray-100 rounded-xl p-0.5 text-xs font-bold shrink-0">
           {(["EN", "HI", "TE"] as const).map((l) => (
             <button
               key={l}
               onClick={() => setLang(l)}
-              className={`px-2 py-1 rounded-lg transition-all ${
+              className={`px-1.5 sm:px-2 py-1 rounded-lg transition-all ${
                 lang === l ? "bg-white text-[#0B3D66] shadow-xs" : "text-gray-400 hover:text-gray-600 cursor-pointer"
               }`}
             >
@@ -515,10 +522,10 @@ function Topbar({
         </div>
 
         {/* Profile Avatar & Logout */}
-        <div className="flex items-center gap-2 pl-2 border-l border-gray-100">
+        <div className="flex items-center gap-1.5 sm:gap-2 pl-1.5 sm:pl-2 border-l border-gray-100 shrink-0">
           <button
             onClick={() => onNav("profile")}
-            className="w-8 h-8 rounded-full bg-[#0B3D66] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 cursor-pointer"
+            className="w-8 h-8 rounded-full bg-[#0B3D66] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 cursor-pointer shadow-2xs"
             title="My Profile"
           >
             {(profile?.name || "RS").slice(0, 2).toUpperCase()}
@@ -3701,7 +3708,7 @@ function TrainerScreen() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: "Documents Uploaded", val: "12" },
           { label: "Quizzes Created", val: "24" },
@@ -3782,7 +3789,7 @@ function TrainerScreen() {
                     Validated ✓
                   </span>
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px] text-gray-600">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-600">
                   {q.options.map((opt, i) => (
                     <div key={i} className={`p-2 rounded-lg border ${i === q.correctAnswerIndex ? "bg-emerald-50 border-emerald-300 font-bold text-emerald-900" : "bg-white border-gray-200"}`}>
                       {String.fromCharCode(65 + i)}. {opt}
@@ -3850,7 +3857,7 @@ function AdminScreen() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Ministry Administrator Analytics</h1>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -3859,14 +3866,14 @@ function AdminScreen() {
         </div>
         <button
           onClick={handleExportCsv}
-          className="px-4 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f]"
+          className="px-4 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] cursor-pointer self-start sm:self-auto"
         >
           📥 Export Cadre Roster (.csv)
         </button>
       </div>
 
       {/* Top 4 Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
           { label: "Total Officers Monitored", value: totalEmployees.toString(), sub: "Active ISS/SSS Records", color: "#0B3D66", badge: "Cadre Roster", badgeColor: "bg-blue-100 text-blue-800", icon: "👥" },
           { label: "Average Competency Index", value: `${avgCompetency} / 5.0`, sub: "Across all divisions", color: "#FF7A00", badge: "MoSPI Avg", badgeColor: "bg-orange-100 text-orange-800", icon: "📊" },

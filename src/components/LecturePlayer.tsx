@@ -472,26 +472,27 @@ export function LecturePlayer({
 
       {/* Slide Navigation Toolbar */}
       {playerMode === "interactive" && (
-        <div className="bg-[#0B253A] px-5 py-3 border-t border-white/10 flex items-center justify-between text-white text-xs">
-          <div className="flex items-center gap-2">
+        <div className="bg-[#0B253A] px-3 sm:px-5 py-3 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-3 text-white text-xs">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-start">
             <button
               onClick={handlePrevSlide}
               disabled={slideIndex === 0}
-              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-30 rounded-xl text-xs font-semibold transition-colors"
+              className="px-3 py-1.5 bg-white/10 hover:bg-white/20 disabled:opacity-30 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
             >
-              ← Previous Slide
+              <span className="sm:hidden">← Prev</span>
+              <span className="hidden sm:inline">← Previous Slide</span>
             </button>
             <button
               onClick={() => setIsPlaying(!isPlaying)}
-              className="px-4 py-1.5 bg-[#FF7A00] hover:bg-[#e06a00] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm"
+              className="px-3.5 sm:px-4 py-1.5 bg-[#FF7A00] hover:bg-[#e06a00] rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <span>{isPlaying ? "❚❚ Pause Deck" : "▶ Auto-Play Deck"}</span>
+              <span>{isPlaying ? "❚❚ Pause" : "▶ Play Deck"}</span>
             </button>
             <button
               onClick={handleNextSlide}
-              className="px-4 py-1.5 bg-[#0B3D66] hover:bg-[#082e4f] border border-white/20 rounded-xl text-xs font-semibold transition-colors"
+              className="px-3.5 sm:px-4 py-1.5 bg-[#0B3D66] hover:bg-[#082e4f] border border-white/20 rounded-xl text-xs font-semibold transition-colors cursor-pointer"
             >
-              {slideIndex === activeSlides.length - 1 ? "Complete Chapter ✓" : "Next Slide →"}
+              {slideIndex === activeSlides.length - 1 ? "Complete ✓" : "Next →"}
             </button>
           </div>
 
@@ -505,7 +506,7 @@ export function LecturePlayer({
                   setSelectedQuizOption(null);
                   setQuizAnswered(false);
                 }}
-                className={`w-2.5 h-2.5 rounded-full transition-all ${
+                className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
                   idx === slideIndex
                     ? "bg-[#FF7A00] w-6"
                     : "bg-white/20 hover:bg-white/40"

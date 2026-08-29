@@ -222,22 +222,8 @@ export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) 
 
       {/* Main Learning Grid (Sidebar + Active Player) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
-        {/* Topic Sidebar */}
-        <div className="lg:col-span-4 h-full">
-          <TopicSidebar
-            topics={topics}
-            currentTopicId={currentTopicId}
-            completedTopicIds={completedTopicIds}
-            onSelectTopic={(tId) => {
-              setCurrentTopicId(tId);
-              setCurrentSlide(1);
-            }}
-            overallProgressPct={progressPct}
-          />
-        </div>
-
-        {/* Player Canvas */}
-        <div className="lg:col-span-8 space-y-4">
+        {/* Player Canvas (Top on Mobile, Right on Desktop) */}
+        <div className="order-1 lg:order-2 lg:col-span-8 space-y-4">
           {activeMode === "youtube" ? (
             <YouTubePlayer
               videoId="r-uOLxNrNk8"
@@ -272,6 +258,20 @@ export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) 
               Take Topic Quiz (3 MCQs) →
             </button>
           </div>
+        </div>
+
+        {/* Topic Sidebar (Below on Mobile, Left on Desktop) */}
+        <div className="order-2 lg:order-1 lg:col-span-4 h-full">
+          <TopicSidebar
+            topics={topics}
+            currentTopicId={currentTopicId}
+            completedTopicIds={completedTopicIds}
+            onSelectTopic={(tId) => {
+              setCurrentTopicId(tId);
+              setCurrentSlide(1);
+            }}
+            overallProgressPct={progressPct}
+          />
         </div>
       </div>
 

@@ -35,6 +35,7 @@ body,
 
 * {
   scrollbar-width: none;
+  -webkit-tap-highlight-color: transparent;
 }
 *::-webkit-scrollbar {
   display: none;
@@ -46,4 +47,21 @@ body,
 body {
   font-family: var(--font-sans);
   background-color: #F7F9FB;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Mobile Safe-Area & Touch Helpers */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
+.touch-scroll {
+  -webkit-overflow-scrolling: touch;
 }
