@@ -232,6 +232,11 @@ export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) 
             <YouTubePlayer
               videoId={activeYoutubeId}
               title={currentTopic.title}
+              courseTitle={course.title}
+              category={course.category}
+              provider={course.provider}
+              competency={course.primaryCompetency}
+              initialSlides={slides}
               transcripts={transcripts}
               currentTime={currentVideoTime}
               onTimeUpdate={(sec) => setCurrentVideoTime(sec)}
