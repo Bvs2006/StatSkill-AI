@@ -509,23 +509,50 @@ export const RICH_COURSE_DETAILS: Record<string, RichCourseDetail> = {
   },
 };
 
+// Course ID Aliases linking 100-series iGOT IDs to their rich syllabus
+const COURSE_ID_ALIASES: Record<string, string> = {
+  "igot-101": "igot-201", // Python for Official Statistics
+  "igot-102": "igot-205", // AI & ML in Official Statistics
+  "igot-103": "igot-207", // Geospatial & GIS Analysis
+  "igot-104": "nssta-103", // CPI / Price Statistics
+  "igot-105": "igot-203", // SQL Enterprise Database
+  "igot-106": "igot-206", // Data Visualization & Storytelling
+  "igot-107": "igot-202", // R Programming for Surveys
+  "igot-108": "igot-208", // Survey Management & Leadership
+};
+
 /**
  * Returns rich course details for a given course ID, matching all 16 authentic courses
  */
 export function getRichCourseDetail(courseId: string, fallbackTitle: string): RichCourseDetail {
-  if (RICH_COURSE_DETAILS[courseId]) {
-    return RICH_COURSE_DETAILS[courseId];
+  const resolvedId = COURSE_ID_ALIASES[courseId] || courseId;
+
+  if (RICH_COURSE_DETAILS[resolvedId]) {
+    return RICH_COURSE_DETAILS[resolvedId];
+  }
+
+  // Check if any rich detail matches title keywords
+  const titleLower = fallbackTitle.toLowerCase();
+  for (const [key, detail] of Object.entries(RICH_COURSE_DETAILS)) {
+    if (titleLower.includes("python") && key.includes("201")) return detail;
+    if ((titleLower.includes("ai") || titleLower.includes("machine learning")) && key.includes("205")) return detail;
+    if ((titleLower.includes("gis") || titleLower.includes("qgis")) && (key.includes("207") || key.includes("108"))) return detail;
+    if (titleLower.includes("sql") && key.includes("203")) return detail;
+    if ((titleLower.includes("visualization") || titleLower.includes("storytelling")) && key.includes("206")) return detail;
+    if (titleLower.includes("price") || titleLower.includes("cpi") && key.includes("103")) return detail;
+    if ((titleLower.includes("sna") || titleLower.includes("gva") || titleLower.includes("national accounts")) && key.includes("101")) return detail;
+    if ((titleLower.includes("sampling") || titleLower.includes("survey")) && key.includes("102")) return detail;
   }
 
   // Generic fallback if new custom ID is added
   return {
     courseId,
-    youtubeId: "d8uTB5XorBw",
+    youtubeId: "eWRfhZUzrAc",
     chapters: [
-      { id: 1, title: `1. Introduction to ${fallbackTitle}`, duration: "15:00", youtubeId: "d8uTB5XorBw", summary: "Core fundamental principles and administrative guidelines.", completed: true },
-      { id: 2, title: "2. Methodological Standards & Data Flow", duration: "22:30", youtubeId: "rfscVS0vtbw", summary: "Practical field instructions and validation checks.", completed: false },
+      { id: 1, title: `1. Introduction to ${fallbackTitle}`, duration: "15:00", youtubeId: "eWRfhZUzrAc", summary: "Core fundamental principles and administrative guidelines.", completed: true },
+      { id: 2, title: "2. Methodological Standards & Data Flow", duration: "22:30", youtubeId: "HXV3zeRR3h4", summary: "Practical field instructions and validation checks.", completed: false },
       { id: 3, title: "3. Analytical Case Studies & Government Applications", duration: "28:10", youtubeId: "kqtD5dpn9C8", summary: "Real-world policy implications and indicator tabulation.", completed: false },
-      { id: 4, title: "4. Quality Assurance & Evaluation", duration: "18:40", youtubeId: "d8uTB5XorBw", summary: "Summary review and assessment preparation.", completed: false },
+      { id: 4, title: "4. Quality Assurance & Evaluation", duration: "18:40", youtubeId: "2X_2IdaD3xQ", summary: "Summary review and assessment preparation.", completed: false },
     ],
     transcript: [
       { time: "00:00", speaker: "NSSTA / iGOT Faculty", text: `Namaste officers. Welcome to this specialized training module on ${fallbackTitle}.` },

@@ -708,64 +708,72 @@ export const DEFAULT_EMPLOYEES: EmployeeRecord[] = [
 // ──────────────────────────────────────────────
 // 10. Personalized Learning Path Generator
 // ──────────────────────────────────────────────
-export function getPersonalizedLearningPath(userComps: UserCompetencyScore[]): LearningPathStep[] {
-  return [
-    {
-      stepNumber: 1,
-      title: "Data Storytelling & Executive Visual Briefings",
-      duration: "8 hours",
-      provider: "iGOT",
-      difficulty: "Foundation",
-      skillAddressed: "Data Visualization & Storytelling",
-      matchScore: 98,
-      status: "Completed",
-      courseId: "igot-104",
-    },
-    {
-      stepNumber: 2,
-      title: "Python for Data Analysis & Statistical Processing",
-      duration: "20 hours",
-      provider: "iGOT",
-      difficulty: "Intermediate",
-      skillAddressed: "Python for Data Analysis",
-      matchScore: 94,
-      status: "In Progress",
-      courseId: "igot-101",
-    },
-    {
-      stepNumber: 3,
-      title: "Enterprise Database Management with SQL & Open Data APIs",
-      duration: "12 hours",
-      provider: "iGOT",
-      difficulty: "Foundation",
-      skillAddressed: "SQL & Database Querying",
-      matchScore: 89,
-      status: "Recommended",
-      courseId: "igot-105",
-    },
-    {
-      stepNumber: 4,
-      title: "GIS & Geospatial Analysis with QGIS for Field Surveys",
-      duration: "16 hours",
-      provider: "NSSTA",
-      difficulty: "Intermediate",
-      skillAddressed: "GIS & Geospatial Mapping",
-      matchScore: 92,
-      status: "Recommended",
-      courseId: "igot-103",
-    },
-    {
-      stepNumber: 5,
-      title: "Artificial Intelligence & Machine Learning in Official Statistics",
-      duration: "24 hours",
-      provider: "iGOT",
-      difficulty: "Advanced",
-      skillAddressed: "Artificial Intelligence & ML",
-      matchScore: 91,
-      status: "Locked",
-      courseId: "igot-102",
-    },
-  ];
+export function getPersonalizedLearningPath(
+  userComps?: UserCompetencyScore[],
+  customCourses?: CourseItem[]
+): LearningPathStep[] {
+  const comps = userComps && userComps.length > 0 ? userComps : (typeof window !== "undefined" ? getUserCompetencies() : []);
+  const allCourses = customCourses || (typeof window !== "undefined" ? getCourses() : DEFAULT_COURSES_CATALOGUE);
+
+  // Find priority gaps
+  const sortedGaps = [...comps]
+    .sort((a, b) => b.priorityScore - a.priorityScore);
+
+  const steps: LearningPathStep[] = [];
+  const usedCourseIds = new Set<string>();
+
+  // 1. Match courses to top priority gaps
+  for (const gap of sortedGaps) {
+    const matchingCourse = allCourses.find(
+      (c) =>
+        !usedCourseIds.has(c.id) &&
+        (c.primaryCompetency.toLowerCase() === gap.competencyName.toLowerCase() ||
+          c.competenciesCovered.some((cc) => cc.toLowerCase().includes(gap.competencyName.toLowerCase()) || gap.competencyName.toLowerCase().includes(cc.toLowerCase())))
+    );
+
+    if (matchingCourse) {
+      usedCourseIds.add(matchingCourse.id);
+      const isCompleted = gap.gap === 0 && gap.currentLevel >= 4;
+      const isInProgress = steps.filter((s) => s.status === "In Progress").length === 0 && !isCompleted && steps.length === 0;
+
+      steps.push({
+        stepNumber: steps.length + 1,
+        title: matchingCourse.title,
+        duration: matchingCourse.duration,
+        provider: matchingCourse.provider as any,
+        difficulty: matchingCourse.difficulty as any,
+        skillAddressed: gap.competencyName,
+        matchScore: Math.min(99, Math.max(82, Math.round(gap.priorityScore * 0.95))),
+        status: isCompleted ? "Completed" : isInProgress ? "In Progress" : steps.length <= 2 ? "Recommended" : "Locked",
+        courseId: matchingCourse.id,
+      });
+    }
+
+    if (steps.length >= 6) break;
+  }
+
+  // 2. If fewer than 5 steps, populate with key foundational courses
+  if (steps.length < 5) {
+    for (const course of allCourses) {
+      if (!usedCourseIds.has(course.id)) {
+        usedCourseIds.add(course.id);
+        steps.push({
+          stepNumber: steps.length + 1,
+          title: course.title,
+          duration: course.duration,
+          provider: course.provider as any,
+          difficulty: course.difficulty as any,
+          skillAddressed: course.primaryCompetency,
+          matchScore: 88,
+          status: steps.length === 0 ? "In Progress" : steps.length <= 2 ? "Recommended" : "Locked",
+          courseId: course.id,
+        });
+      }
+      if (steps.length >= 5) break;
+    }
+  }
+
+  return steps;
 }
 
 // ──────────────────────────────────────────────

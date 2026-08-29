@@ -2128,64 +2128,386 @@ function LearningPathScreen({
   onNav: (s: Screen) => void;
   onOpenCourse: (c: CourseItem) => void;
 }) {
-  const userComps = getUserCompetencies();
-  const path = getPersonalizedLearningPath(userComps);
+  const profile = getProfile();
+  const [userComps, setUserComps] = useState<UserCompetencyScore[]>(() => getUserCompetencies());
   const courses = getCourses();
 
+  // Career Tracks
+  const [selectedTrack, setSelectedTrack] = useState<string>("data_analytics");
+  const [pace, setPace] = useState<"standard" | "intensive" | "executive">("standard");
+  const [showAdvisorInfo, setShowAdvisorInfo] = useState(false);
+
+  // Dynamic Learning Path
+  const path = getPersonalizedLearningPath(userComps, courses);
+
+  // Stats calculation
+  const totalSteps = path.length;
+  const completedSteps = path.filter((s) => s.status === "Completed").length;
+  const inProgressSteps = path.filter((s) => s.status === "In Progress").length;
+  const progressPct = totalSteps > 0 ? Math.round((completedSteps / totalSteps) * 100) : 0;
+
+  // Calculate total hours
+  const totalHours = path.reduce((acc, s) => {
+    const hrs = parseInt(s.duration) || 12;
+    return acc + hrs;
+  }, 0);
+
+  // Calculate completion date based on pace
+  const hoursPerWeek = pace === "intensive" ? 10 : pace === "executive" ? 3 : 6;
+  const weeksNeeded = Math.ceil(totalHours / hoursPerWeek);
+  const targetDate = new Date();
+  targetDate.setDate(targetDate.getDate() + weeksNeeded * 7);
+  const targetDateStr = targetDate.toLocaleDateString("en-IN", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+
+  const TRACKS = [
+    {
+      id: "data_analytics",
+      label: "Official Data Analytics & Microdata",
+      icon: "🐍",
+      desc: "Python, SQL, R, and automated NSSO microdata processing pipelines.",
+      targetRole: "Data Analyst / Senior Statistical Officer",
+    },
+    {
+      id: "national_accounts",
+      label: "National Accounts & Macro GVA",
+      icon: "📊",
+      desc: "UN SNA 2008, Supply-Use Tables, Constant Price Deflators, and CPI/WPI.",
+      targetRole: "Macro-Economic National Accounts Specialist",
+    },
+    {
+      id: "survey_operations",
+      label: "Sample Survey Operations & PLFS",
+      icon: "📋",
+      desc: "Multi-stage PPS sampling, SDRD validation standards, and field leadership.",
+      targetRole: "Survey Director / Deputy Director General",
+    },
+    {
+      id: "ai_governance",
+      label: "AI, Geospatial & Digital Governance",
+      icon: "🤖",
+      desc: "AI/ML in statistics, QGIS spatial intelligence, and DPDP Act compliance.",
+      targetRole: "Director, Digital Systems & Capacity",
+    },
+  ];
+
+  const activeTrackObj = TRACKS.find((t) => t.id === selectedTrack) || TRACKS[0];
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Your Personalized Learning Path</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Goal: Become proficient in AI-enabled statistical analysis and survey automation.
-        </p>
+    <div className="max-w-5xl mx-auto space-y-6 animate-in fade-in duration-300">
+      {/* ─── 1. Header Banner ─── */}
+      <div className="bg-gradient-to-r from-[#0B3D66] via-[#0D4B7D] to-[#125894] rounded-3xl p-6 md:p-8 text-white shadow-xl relative overflow-hidden">
+        <div className="absolute right-0 top-0 w-96 h-96 bg-white/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-10 right-20 w-60 h-60 bg-orange-500/15 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col md:flex-row justify-between md:items-center gap-6">
+          <div className="space-y-2 max-w-2xl">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="px-3 py-1 bg-amber-400/20 text-amber-300 border border-amber-400/30 text-[11px] font-bold rounded-full uppercase tracking-wider">
+                🗺️ MoSPI Competency Roadmap
+              </span>
+              <span className="px-2.5 py-0.5 bg-white/10 text-gray-200 text-xs rounded-full font-mono">
+                {profile.cadre} · {profile.cadreGrade}
+              </span>
+            </div>
+            <h1 className="text-2xl md:text-3xl font-serif font-bold text-white tracking-tight">
+              Personalized Capacity Learning Path
+            </h1>
+            <p className="text-xs md:text-sm text-blue-100/90 leading-relaxed">
+              Tailored specifically for <strong>{profile.name}</strong> to close cadre skill gaps
+              and accelerate readiness for <strong>{activeTrackObj.targetRole}</strong>.
+            </p>
+          </div>
+
+          {/* Quick Metrics Badge */}
+          <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/15 min-w-[200px] text-center shrink-0">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-blue-200">
+              Roadmap Progress
+            </div>
+            <div className="text-3xl font-bold text-amber-400 font-mono mt-0.5">
+              {progressPct}%
+            </div>
+            <div className="text-[11px] text-blue-100 mt-1">
+              {completedSteps} of {totalSteps} Milestone Steps Achieved
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-4">
-        {path.map((step) => {
-          const course = courses.find((c) => c.id === step.courseId);
-          return (
-            <div key={step.stepNumber} className="p-5 bg-white rounded-3xl border border-gray-100 shadow-2xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-start gap-4">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold text-sm ${
-                  step.status === "Completed" ? "bg-emerald-100 text-emerald-800" : step.status === "In Progress" ? "bg-[#0B3D66] text-white" : "bg-gray-100 text-gray-600"
-                }`}>
-                  0{step.stepNumber}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-100 text-purple-800">
-                      {step.provider}
-                    </span>
-                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                      {step.matchScore}% Match
-                    </span>
-                  </div>
-                  <h3 className="text-sm font-bold text-gray-900">{step.title}</h3>
-                  <div className="text-xs text-gray-500 mt-0.5">
-                    {step.duration} · Addresses: <strong>{step.skillAddressed}</strong>
-                  </div>
-                </div>
-              </div>
+      {/* ─── 2. Career Track Switcher & Pace Planner ─── */}
+      <div className="bg-white rounded-3xl p-5 md:p-6 border border-gray-100 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-3 border-b border-gray-100">
+          <div>
+            <h3 className="text-xs font-bold text-gray-800 uppercase tracking-wider flex items-center gap-2">
+              <span>🎯</span>
+              <span>Target Career Specialization</span>
+            </h3>
+            <p className="text-[11px] text-gray-500">
+              Switching tracks dynamically adjusts the AI recommendation algorithm for your cadre.
+            </p>
+          </div>
 
-              <div>
-                {course && (
-                  <button
-                    onClick={() => {
-                      onOpenCourse(course);
-                      onNav("course_detail");
-                    }}
-                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                      step.status === "Completed" ? "bg-gray-100 text-gray-700" : "bg-[#0B3D66] text-white hover:bg-[#082e4f]"
-                    }`}
-                  >
-                    {step.status === "Completed" ? "Review" : step.status === "In Progress" ? "Continue" : "Start"}
-                  </button>
-                )}
+          {/* Pace selector */}
+          <div className="flex items-center gap-1.5 bg-gray-50 p-1 rounded-xl border border-gray-200 text-xs">
+            <span className="text-[10px] font-bold text-gray-400 px-1.5">Pace:</span>
+            {[
+              { id: "executive", label: "Executive (3h/wk)" },
+              { id: "standard", label: "Standard (6h/wk)" },
+              { id: "intensive", label: "Intensive (10h/wk)" },
+            ].map((p) => (
+              <button
+                key={p.id}
+                onClick={() => setPace(p.id as any)}
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                  pace === p.id
+                    ? "bg-[#0B3D66] text-white shadow-xs"
+                    : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Track Pills */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {TRACKS.map((t) => {
+            const isSelected = selectedTrack === t.id;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setSelectedTrack(t.id)}
+                className={`p-3.5 rounded-2xl text-left border transition-all cursor-pointer group ${
+                  isSelected
+                    ? "bg-blue-50/80 border-[#0B3D66] shadow-xs"
+                    : "bg-gray-50/60 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xl">{t.icon}</span>
+                  {isSelected && (
+                    <span className="text-[10px] font-bold px-2 py-0.5 bg-[#0B3D66] text-white rounded-full">
+                      Active
+                    </span>
+                  )}
+                </div>
+                <h4 className="text-xs font-bold text-gray-900 leading-snug group-hover:text-[#0B3D66]">
+                  {t.label}
+                </h4>
+                <p className="text-[10px] text-gray-500 line-clamp-2 mt-1 leading-normal">
+                  {t.desc}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Summary Metric Strip */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+          <div className="p-3 bg-gray-50/80 rounded-2xl border border-gray-100 text-center">
+            <span className="text-[10px] uppercase font-bold text-gray-400">Total Curriculum</span>
+            <div className="text-sm font-bold text-gray-900 font-mono mt-0.5">{totalHours} Hours</div>
+          </div>
+          <div className="p-3 bg-gray-50/80 rounded-2xl border border-gray-100 text-center">
+            <span className="text-[10px] uppercase font-bold text-gray-400">Target ETA</span>
+            <div className="text-sm font-bold text-emerald-700 font-mono mt-0.5">{targetDateStr}</div>
+          </div>
+          <div className="p-3 bg-gray-50/80 rounded-2xl border border-gray-100 text-center">
+            <span className="text-[10px] uppercase font-bold text-gray-400">CPD Accreditation</span>
+            <div className="text-sm font-bold text-purple-700 font-mono mt-0.5">35 Points</div>
+          </div>
+          <div className="p-3 bg-gray-50/80 rounded-2xl border border-gray-100 text-center">
+            <span className="text-[10px] uppercase font-bold text-gray-400">Accredited Bodies</span>
+            <div className="text-sm font-bold text-[#0B3D66] font-mono mt-0.5">NSSTA &amp; iGOT</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── 3. AI Gap Bridge Explanation Collapsible ─── */}
+      <div className="bg-amber-50/80 border border-amber-200 rounded-3xl p-5 text-xs shadow-2xs">
+        <div className="flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <span className="text-base">💡</span>
+            <strong className="text-amber-900 text-xs">
+              Why this Learning Path was generated for your Profile:
+            </strong>
+          </div>
+          <button
+            onClick={() => setShowAdvisorInfo(!showAdvisorInfo)}
+            className="text-amber-800 font-bold hover:underline cursor-pointer"
+          >
+            {showAdvisorInfo ? "Hide AI Formula Details ↑" : "Explain Recommendation Logic ↓"}
+          </button>
+        </div>
+
+        {showAdvisorInfo && (
+          <div className="mt-3 pt-3 border-t border-amber-200/80 text-amber-950 space-y-2 leading-relaxed animate-in fade-in">
+            <p>
+              Your learning sequence is dynamically determined by the MoSPI 5-Factor Priority Algorithm:
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] pt-1">
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200">
+                <strong>1. Critical Deficit Bridge (35%)</strong>
+                <p className="text-gray-600 mt-0.5">Top deficit competencies (e.g. Python, SQL, GIS) are prioritized first.</p>
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200">
+                <strong>2. Cadre Benchmark (25%)</strong>
+                <p className="text-gray-600 mt-0.5">Aligned with required mastery levels for {profile.cadreGrade} rank.</p>
+              </div>
+              <div className="bg-white/80 p-2.5 rounded-xl border border-amber-200">
+                <strong>3. Ministry Priorities (20%)</strong>
+                <p className="text-gray-600 mt-0.5">Incorporates MoSPI 2026 digital modernization initiatives.</p>
               </div>
             </div>
-          );
-        })}
+          </div>
+        )}
+      </div>
+
+      {/* ─── 4. Visual Milestone Timeline Steps ─── */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center px-1">
+          <h2 className="text-base font-bold text-[#0B3D66]">
+            Milestone Progression &amp; Modular Steps ({path.length} Courses)
+          </h2>
+          <span className="text-xs text-gray-500">
+            Click on any course to open the interactive player
+          </span>
+        </div>
+
+        <div className="space-y-3.5">
+          {path.map((step, idx) => {
+            const course = courses.find((c) => c.id === step.courseId);
+            const isCompleted = step.status === "Completed";
+            const isInProgress = step.status === "In Progress";
+            const isLocked = step.status === "Locked";
+
+            return (
+              <div
+                key={step.stepNumber || idx}
+                className={`p-5 rounded-3xl border transition-all ${
+                  isInProgress
+                    ? "bg-white border-[#0B3D66] shadow-md ring-2 ring-[#0B3D66]/10"
+                    : isCompleted
+                    ? "bg-emerald-50/40 border-emerald-200 shadow-2xs"
+                    : "bg-white border-gray-200/80 shadow-2xs hover:border-gray-300"
+                }`}
+              >
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Left Column: Step Indicator + Info */}
+                  <div className="flex items-start gap-4">
+                    {/* Step Number Circle */}
+                    <div
+                      className={`w-11 h-11 rounded-2xl flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ${
+                        isCompleted
+                          ? "bg-emerald-600 text-white"
+                          : isInProgress
+                          ? "bg-[#0B3D66] text-white animate-pulse"
+                          : "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {isCompleted ? "✓" : `0${step.stepNumber}`}
+                    </div>
+
+                    {/* Step Content */}
+                    <div className="space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                            step.provider === "iGOT"
+                              ? "bg-purple-100 text-purple-800"
+                              : "bg-blue-100 text-blue-800"
+                          }`}
+                        >
+                          {step.provider === "iGOT" ? "🏛️ iGOT Karmayogi" : "🎓 NSSTA Academy"}
+                        </span>
+                        <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-full">
+                          {step.matchScore}% Cadre Match
+                        </span>
+                        <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
+                          {step.difficulty}
+                        </span>
+                        {isInProgress && (
+                          <span className="text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full animate-pulse">
+                            ● Current In Progress
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className="text-sm md:text-base font-bold text-gray-900 leading-snug">
+                        {step.title}
+                      </h3>
+
+                      <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600">
+                        <span>⏱️ {step.duration}</span>
+                        <span>•</span>
+                        <span>
+                          Direct Remediation for:{" "}
+                          <strong className="text-[#0B3D66]">{step.skillAddressed}</strong>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Right Column: Actions */}
+                  <div className="flex items-center gap-2 shrink-0 self-end md:self-center">
+                    {course && (
+                      <button
+                        onClick={() => {
+                          onOpenCourse(course);
+                          onNav("course_detail");
+                        }}
+                        className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-xs ${
+                          isCompleted
+                            ? "bg-gray-100 hover:bg-gray-200 text-gray-700"
+                            : isInProgress
+                            ? "bg-[#FF7A00] hover:bg-[#e06a00] text-white shadow-orange-500/20 shadow-md"
+                            : "bg-[#0B3D66] hover:bg-[#082e4f] text-white"
+                        }`}
+                      >
+                        <span>
+                          {isCompleted
+                            ? "Review Course ↺"
+                            : isInProgress
+                            ? "Resume Lecture ▶"
+                            : "Start Step →"}
+                        </span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ─── 5. Capstone Accreditation & Certificate Card ─── */}
+      <div className="p-6 bg-gradient-to-br from-slate-900 to-[#0B3D66] text-white rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="space-y-1 max-w-xl">
+          <div className="flex items-center gap-2">
+            <span className="text-amber-400 font-bold text-xs uppercase tracking-wider">
+              📜 National Credential Milestone
+            </span>
+          </div>
+          <h3 className="text-lg font-bold text-white">
+            Official MoSPI &amp; NSSTA Cadre Accreditation Certificate
+          </h3>
+          <p className="text-xs text-gray-300 leading-relaxed">
+            Completing this learning path fulfills the mandatory Annual CPD training hours and awards
+            a digitally signed, QR-verifiable Official Capacity Certificate.
+          </p>
+        </div>
+
+        <button
+          onClick={() => onNav("credentials")}
+          className="px-5 py-3 bg-amber-400 hover:bg-amber-300 text-gray-950 text-xs font-bold rounded-2xl transition-all shadow-lg shrink-0 cursor-pointer"
+        >
+          View Credential Vault 🏆
+        </button>
       </div>
     </div>
   );
