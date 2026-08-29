@@ -767,7 +767,22 @@ export function getProfile(): OfficerProfile {
   const stored = localStorage.getItem(STORAGE_KEYS.PROFILE);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (parsed && typeof parsed === "object") {
+        return {
+          ...DEMO_STATISTICAL_OFFICER,
+          ...parsed,
+          name: parsed.name || DEMO_STATISTICAL_OFFICER.name,
+          role: parsed.role || "learner",
+          cadre: parsed.cadre || DEMO_STATISTICAL_OFFICER.cadre,
+          cadreGrade: parsed.cadreGrade || DEMO_STATISTICAL_OFFICER.cadreGrade,
+          department: parsed.department || DEMO_STATISTICAL_OFFICER.department,
+          designation: parsed.designation || DEMO_STATISTICAL_OFFICER.designation,
+          posting: parsed.posting || DEMO_STATISTICAL_OFFICER.posting,
+          coursesCompleted: typeof parsed.coursesCompleted === "number" ? parsed.coursesCompleted : 3,
+          learningHours: typeof parsed.learningHours === "number" ? parsed.learningHours : 42,
+        };
+      }
     } catch {}
   }
   return DEMO_STATISTICAL_OFFICER;

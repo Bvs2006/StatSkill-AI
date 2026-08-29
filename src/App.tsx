@@ -522,7 +522,7 @@ function Topbar({
             className="w-8 h-8 rounded-full bg-[#0B3D66] text-white flex items-center justify-center text-xs font-bold hover:opacity-90 cursor-pointer"
             title="My Profile"
           >
-            {profile.name.slice(0, 2).toUpperCase()}
+            {(profile?.name || "RS").slice(0, 2).toUpperCase()}
           </button>
           <button
             onClick={onLogout}
@@ -3108,7 +3108,7 @@ function ProfileScreen() {
       <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm space-y-6">
         <div className="flex items-center gap-4 pb-4 border-b border-gray-100">
           <div className="w-16 h-16 rounded-2xl bg-[#0B3D66] text-white flex items-center justify-center text-xl font-bold">
-            {profile.name.slice(0, 2).toUpperCase()}
+            {(profile?.name || "RS").slice(0, 2).toUpperCase()}
           </div>
           <div>
             <h2 className="text-lg font-bold text-[#0B3D66]">{profile.name}</h2>
