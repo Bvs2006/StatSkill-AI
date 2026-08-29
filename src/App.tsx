@@ -101,6 +101,7 @@ import { LandingPage } from "./components/LandingPage";
 import { AIResponseMessage } from "./components/AIResponseMessage";
 import { NsstaRegistrationModal } from "./components/NsstaRegistrationModal";
 import { SkillGapAnalysis } from "./components/SkillGapAnalysis";
+import { MySkillsPortfolio } from "./components/MySkillsPortfolio";
 
 export type Screen =
   | "landing"
@@ -1738,80 +1739,14 @@ function DashboardScreen({
 // 4. My Skills Page (/skills)
 // ──────────────────────────────────────────────
 
-function SkillsScreen({ onNav }: { onNav: (s: Screen) => void }) {
-  const [userComps, setUserComps] = useState<UserCompetencyScore[]>(getUserCompetencies());
-  const [domainFilter, setDomainFilter] = useState<string>("All");
-
-  const filtered = domainFilter === "All" ? userComps : userComps.filter((c) => c.domain === domainFilter);
-
-  return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">My Competency Profile</h1>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Evaluated on a 1–5 Scale: 1=Beginner, 2=Basic, 3=Intermediate, 4=Advanced, 5=Expert
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => onNav("skill_gaps")}
-            className="px-3.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF7A00] border border-orange-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
-          >
-            <span>⚖️ Cadre Gap Diagnosis →</span>
-          </button>
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl text-xs font-semibold overflow-x-auto">
-            {["All", "Statistical", "Technical", "Digital Governance", "Behavioural"].map((d) => (
-              <button
-                key={d}
-                onClick={() => setDomainFilter(d)}
-                className={`px-3 py-1.5 rounded-lg transition-all ${
-                  domainFilter === d ? "bg-[#0B3D66] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                {d}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filtered.map((c) => (
-          <div key={c.competencyId} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-2xs space-y-3">
-            <div className="flex items-start justify-between">
-              <div>
-                <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">{c.domain}</span>
-                <h3 className="text-sm font-bold text-[#0B3D66]">{c.competencyName}</h3>
-              </div>
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${c.gap > 0 ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"}`}>
-                {c.gap > 0 ? `Gap: −${c.gap}` : "Target Met ✓"}
-              </span>
-            </div>
-
-            {/* Progress Bar Representation */}
-            <div className="space-y-1">
-              <div className="flex justify-between text-xs font-semibold">
-                <span className="text-gray-600">Current Proficiency: Level {c.currentLevel}/5</span>
-                <span className="text-gray-400">Required: Level {c.requiredLevel}/5</span>
-              </div>
-              <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-                <div
-                  className={`h-full rounded-full ${c.gap > 0 ? "bg-[#FF7A00]" : "bg-emerald-500"}`}
-                  style={{ width: `${(c.currentLevel / 5) * 100}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="text-[10px] text-gray-400 pt-2 border-t border-gray-50 flex justify-between">
-              <span>Evidence: {c.evidenceSource}</span>
-              <span>Assessed: {c.lastAssessedDate}</span>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+function SkillsScreen({
+  onNav,
+  onOpenCourse,
+}: {
+  onNav: (s: Screen) => void;
+  onOpenCourse?: (c: CourseItem) => void;
+}) {
+  return <MySkillsPortfolio onNav={onNav} onOpenCourse={onOpenCourse} />;
 }
 
 // ──────────────────────────────────────────────
@@ -4061,7 +3996,7 @@ export default function App() {
       ) : (
         <AppShell screen={screen} onNav={setScreen} onRoleChange={handleRoleChange}>
           {screen === "dashboard" && <DashboardScreen onNav={setScreen} onOpenCourse={setActiveCourse} />}
-          {screen === "skills" && <SkillsScreen onNav={setScreen} />}
+          {screen === "skills" && <SkillsScreen onNav={setScreen} onOpenCourse={setActiveCourse} />}
           {screen === "assessment" && (
             <AssessmentScreen
               onFinish={(qList, aList) => {
