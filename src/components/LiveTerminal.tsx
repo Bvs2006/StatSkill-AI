@@ -381,6 +381,7 @@ export function LiveTerminalModal({
   const [result, setResult] = useState<ExecutionResult | null>(null);
   const [selectedEx, setSelectedEx] = useState<LabExercise>(OFFICIAL_LAB_EXERCISES[0]);
   const [activeTab, setActiveTab] = useState<"terminal" | "dataset" | "solution">("terminal");
+  const [mobilePane, setMobilePane] = useState<"editor" | "output">("editor");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -394,6 +395,7 @@ export function LiveTerminalModal({
       setResult(null);
     }
     setActiveTab("terminal");
+    setMobilePane("editor");
   }, [exercise, isOpen]);
 
   if (!isOpen) return null;
@@ -402,6 +404,7 @@ export function LiveTerminalModal({
     setRunning(true);
     setResult(null);
     setActiveTab("terminal");
+    setMobilePane("output");
     try {
       let res: ExecutionResult;
       if (selectedEx.language === "python") {
@@ -452,6 +455,7 @@ export function LiveTerminalModal({
     setCode(ex.initialCode);
     setResult(null);
     setActiveTab("terminal");
+    setMobilePane("editor");
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -473,29 +477,53 @@ export function LiveTerminalModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/75 backdrop-blur-xs animate-in fade-in duration-200">
-      <div className="bg-[#1E2430] text-gray-100 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-5xl h-[88vh] flex flex-col overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6 bg-black/80 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="bg-[#1E2430] text-gray-100 rounded-2xl shadow-2xl border border-gray-700 w-full max-w-5xl h-[92vh] sm:h-[88vh] flex flex-col overflow-hidden">
         {/* Top Header */}
-        <div className="bg-[#141923] px-5 py-3.5 border-b border-gray-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1.5">
-              <span className="w-3 h-3 rounded-full bg-rose-500/80 inline-block" />
-              <span className="w-3 h-3 rounded-full bg-amber-500/80 inline-block" />
-              <span className="w-3 h-3 rounded-full bg-emerald-500/80 inline-block" />
+        <div className="bg-[#141923] px-3 sm:px-5 py-2.5 sm:py-3.5 border-b border-gray-800 flex items-center justify-between shrink-0 flex-wrap gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <div className="flex gap-1.5 shrink-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-rose-500/80 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 inline-block" />
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500/80 inline-block" />
             </div>
-            <div className="h-4 w-px bg-gray-700 mx-1" />
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold font-mono text-[#FF7A00]">
-                {selectedEx.language.toUpperCase()} STATISTICAL SANDBOX
+            <div className="h-4 w-px bg-gray-700 mx-0.5 hidden sm:block" />
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="text-[11px] font-bold font-mono text-[#FF7A00] shrink-0">
+                {selectedEx.language.toUpperCase()}
               </span>
               <span className="text-xs text-gray-400">·</span>
-              <span className="text-xs text-gray-300 font-medium truncate max-w-[280px] sm:max-w-md">
+              <span className="text-xs text-gray-300 font-medium truncate max-w-[160px] sm:max-w-md">
                 {selectedEx.title}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          {/* Mobile Pane Switcher (Code vs Output) */}
+          <div className="flex lg:hidden bg-[#1E2430] p-0.5 rounded-lg border border-gray-700 text-[11px] font-bold">
+            <button
+              onClick={() => setMobilePane("editor")}
+              className={`px-2.5 py-1 rounded transition-colors ${
+                mobilePane === "editor"
+                  ? "bg-[#0B3D66] text-white"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              📝 Code
+            </button>
+            <button
+              onClick={() => setMobilePane("output")}
+              className={`px-2.5 py-1 rounded transition-colors ${
+                mobilePane === "output"
+                  ? "bg-[#0B3D66] text-white"
+                  : "text-gray-400 hover:text-white"
+              }`}
+            >
+              🖥️ Output
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
             {/* Exercise Selector */}
             <select
               value={selectedEx.id}
@@ -503,7 +531,7 @@ export function LiveTerminalModal({
                 const found = OFFICIAL_LAB_EXERCISES.find((x) => x.id === e.target.value);
                 if (found) handleSwitchExercise(found);
               }}
-              className="bg-[#1E2430] border border-gray-700 text-gray-300 text-xs rounded-lg px-2.5 py-1 focus:outline-none max-w-[180px] sm:max-w-xs truncate cursor-pointer"
+              className="bg-[#1E2430] border border-gray-700 text-gray-300 text-[11px] sm:text-xs rounded-lg px-2 py-1 focus:outline-none max-w-[130px] sm:max-w-xs truncate cursor-pointer"
             >
               {OFFICIAL_LAB_EXERCISES.map((ex) => (
                 <option key={ex.id} value={ex.id}>
@@ -514,7 +542,7 @@ export function LiveTerminalModal({
 
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+              className="text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer text-sm font-bold"
             >
               ✕
             </button>
@@ -523,33 +551,33 @@ export function LiveTerminalModal({
 
         {/* Middle Body */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-gray-800">
-          {/* Left: Code Editor */}
-          <div className="flex flex-col h-full bg-[#161B22]">
-            <div className="px-4 py-2 bg-[#12161E] border-b border-gray-800 flex items-center justify-between text-xs text-gray-400">
+          {/* Left: Code Editor (shown always on lg:, and on mobile when mobilePane === 'editor') */}
+          <div className={`flex flex-col h-full bg-[#161B22] ${mobilePane !== "editor" ? "hidden lg:flex" : "flex"}`}>
+            <div className="px-3 sm:px-4 py-2 bg-[#12161E] border-b border-gray-800 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-1.5">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-emerald-400 font-semibold">
+                <span className="font-mono text-emerald-400 font-semibold text-xs">
                   main.{selectedEx.language === "python" ? "py" : "sql"}
                 </span>
-                <span className="text-[10px] text-gray-500 font-mono">(Ctrl+Enter to Run)</span>
+                <span className="text-[10px] text-gray-500 font-mono hidden sm:inline">(Ctrl+Enter to Run)</span>
               </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setCode(selectedEx.initialCode)}
-                  className="hover:text-gray-200 text-[11px] font-mono text-gray-400 hover:underline cursor-pointer"
+                  className="hover:text-gray-200 text-[10px] sm:text-[11px] font-mono text-gray-400 hover:underline cursor-pointer"
                   title="Reset to starter challenge code"
                 >
-                  Reset Template ↺
+                  Reset ↺
                 </button>
                 <button
                   onClick={() => setCode(selectedEx.solutionCode)}
-                  className="hover:text-amber-300 text-[11px] font-mono text-amber-400/90 hover:underline cursor-pointer"
+                  className="hover:text-amber-300 text-[10px] sm:text-[11px] font-mono text-amber-400/90 hover:underline cursor-pointer"
                   title="Load reference solution into editor"
                 >
-                  💡 Load Solution
+                  💡 Solution
                 </button>
                 <button
                   onClick={() => setCode("")}
-                  className="hover:text-rose-300 text-[11px] font-mono text-gray-500 hover:underline cursor-pointer"
+                  className="hover:text-rose-300 text-[10px] sm:text-[11px] font-mono text-gray-500 hover:underline cursor-pointer"
                   title="Clear editor"
                 >
                   Clear
@@ -563,12 +591,12 @@ export function LiveTerminalModal({
               onKeyDown={handleKeyDown}
               spellCheck={false}
               placeholder="Write your Python/SQL code here..."
-              className="flex-1 w-full p-4 bg-transparent text-gray-100 font-mono text-xs leading-relaxed resize-none focus:outline-none selection:bg-[#0B3D66]"
+              className="flex-1 w-full p-3 sm:p-4 bg-transparent text-gray-100 font-mono text-xs leading-relaxed resize-none focus:outline-none selection:bg-[#0B3D66]"
             />
           </div>
 
-          {/* Right: Tabbed Output Console & Inspector */}
-          <div className="flex flex-col h-full bg-[#0F131A]">
+          {/* Right: Tabbed Output Console & Inspector (shown always on lg:, and on mobile when mobilePane === 'output') */}
+          <div className={`flex flex-col h-full bg-[#0F131A] ${mobilePane !== "output" ? "hidden lg:flex" : "flex"}`}>
             {/* Lab Objective Bar */}
             <div className="p-3.5 bg-[#141821] border-b border-gray-800 flex items-center justify-between">
               <div>

@@ -662,6 +662,75 @@ function IgotAdapterModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 }
 
 // ──────────────────────────────────────────────
+// Mobile Bottom Navigation Bar (Fast Native Access)
+// ──────────────────────────────────────────────
+
+function MobileBottomNav({
+  current,
+  onNav,
+  role,
+}: {
+  current: Screen;
+  onNav: (s: Screen) => void;
+  role: UserRole;
+}) {
+  const learnerNav: { id: Screen; label: string; icon: string }[] = [
+    { id: "dashboard", label: "Home", icon: "🏛️" },
+    { id: "learning-path", label: "Roadmap", icon: "🗺️" },
+    { id: "gap-analysis", label: "Skill Gap", icon: "🎯" },
+    { id: "virtual-labs", label: "Sandbox", icon: "💻" },
+    { id: "ai-tutor", label: "AI Tutor", icon: "🤖" },
+  ];
+
+  const trainerNav: { id: Screen; label: string; icon: string }[] = [
+    { id: "trainer", label: "Overview", icon: "🎓" },
+    { id: "trainer_curriculum", label: "Curriculum", icon: "📚" },
+    { id: "trainer_assessments", label: "Questions", icon: "📝" },
+    { id: "trainer_reports", label: "Reports", icon: "📊" },
+    { id: "virtual-labs", label: "Sandbox", icon: "💻" },
+  ];
+
+  const adminNav: { id: Screen; label: string; icon: string }[] = [
+    { id: "admin", label: "Admin", icon: "👑" },
+    { id: "admin_cadre_matrix", label: "Cadres", icon: "👥" },
+    { id: "admin_skill_taxonomy", label: "Taxonomy", icon: "🏷️" },
+    { id: "admin_analytics", label: "Reports", icon: "📈" },
+    { id: "gap-analysis", label: "Skill Gap", icon: "🎯" },
+  ];
+
+  const items = role === "admin" ? adminNav : role === "trainer" ? trainerNav : learnerNav;
+
+  return (
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-1.5 py-1 flex justify-around items-center shadow-lg pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))]">
+      {items.map((item) => {
+        const isActive = current === item.id;
+        return (
+          <button
+            key={item.id}
+            onClick={() => onNav(item.id)}
+            className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer min-w-[54px] active:scale-95 ${
+              isActive
+                ? "text-[#0B3D66] font-bold"
+                : "text-gray-500 hover:text-gray-800 font-medium"
+            }`}
+          >
+            <span className={`text-base leading-none mb-0.5 transition-transform ${isActive ? "scale-110" : ""}`}>
+              {item.icon}
+            </span>
+            <span className={`text-[10px] tracking-tight ${isActive ? "text-[#0B3D66] font-extrabold" : "text-gray-500"}`}>
+              {item.label}
+            </span>
+            {isActive && (
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7A00] mt-0.5 animate-in fade-in" />
+            )}
+          </button>
+        );
+      })}
+    </nav>
+  );
+}
+
+// ──────────────────────────────────────────────
 // AppShell Component
 // ──────────────────────────────────────────────
 
@@ -677,6 +746,7 @@ function AppShell({
   onRoleChange: (r: UserRole) => void;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const profile = getProfile();
 
   return (
     <div className="flex h-full min-h-screen bg-[#F7F9FB]">
@@ -693,7 +763,8 @@ function AppShell({
           onRoleChange={onRoleChange}
           onNav={onNav}
         />
-        <main className="flex-1 overflow-auto p-4 md:p-6">{children}</main>
+        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 pb-24 md:pb-8">{children}</main>
+        <MobileBottomNav current={screen} onNav={onNav} role={profile.role} />
       </div>
     </div>
   );
