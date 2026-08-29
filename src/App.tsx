@@ -460,14 +460,6 @@ function Topbar({
           </button>
         </div>
 
-        {/* Groq Cloud AI Engine Status */}
-        <div
-          className="hidden sm:flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs shrink-0"
-          title="Groq Cloud Active"
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          <span>⚡ Groq AI Active</span>
-        </div>
 
         {/* iGOT Adapter Status Badge */}
         <button
