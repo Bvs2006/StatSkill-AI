@@ -99,6 +99,8 @@ import {
 import { CourseLearningPage } from "./components/CoursePlayer/CourseLearningPage";
 import { LandingPage } from "./components/LandingPage";
 import { AIResponseMessage } from "./components/AIResponseMessage";
+import { NsstaRegistrationModal } from "./components/NsstaRegistrationModal";
+import { SkillGapAnalysis } from "./components/SkillGapAnalysis";
 
 export type Screen =
   | "landing"
@@ -1751,18 +1753,26 @@ function SkillsScreen({ onNav }: { onNav: (s: Screen) => void }) {
             Evaluated on a 1–5 Scale: 1=Beginner, 2=Basic, 3=Intermediate, 4=Advanced, 5=Expert
           </p>
         </div>
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl text-xs font-semibold overflow-x-auto">
-          {["All", "Statistical", "Technical", "Digital Governance", "Behavioural"].map((d) => (
-            <button
-              key={d}
-              onClick={() => setDomainFilter(d)}
-              className={`px-3 py-1.5 rounded-lg transition-all ${
-                domainFilter === d ? "bg-[#0B3D66] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {d}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => onNav("skill_gaps")}
+            className="px-3.5 py-1.5 rounded-xl bg-orange-50 hover:bg-orange-100 text-[#FF7A00] border border-orange-200 text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+          >
+            <span>⚖️ Cadre Gap Diagnosis →</span>
+          </button>
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl text-xs font-semibold overflow-x-auto">
+            {["All", "Statistical", "Technical", "Digital Governance", "Behavioural"].map((d) => (
+              <button
+                key={d}
+                onClick={() => setDomainFilter(d)}
+                className={`px-3 py-1.5 rounded-lg transition-all ${
+                  domainFilter === d ? "bg-[#0B3D66] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                {d}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -2010,95 +2020,14 @@ function AssessmentResultScreen({
 // 7. Skill-Gap Detailed Analysis Page (/skill-gaps)
 // ──────────────────────────────────────────────
 
-function SkillGapsScreen({ onNav }: { onNav: (s: Screen) => void }) {
-  const userComps = getUserCompetencies();
-  const gaps = [...userComps].sort((a, b) => b.priorityScore - a.priorityScore);
-  const [selectedSkill, setSelectedSkill] = useState<UserCompetencyScore | null>(null);
-
-  return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Detailed Skill-Gap Analysis</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Priority Score = 35% Skill Gap + 25% Job Requirement + 20% Dept Priority + 10% Demand + 10% Career
-        </p>
-      </div>
-
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs overflow-x-auto">
-        <table className="w-full text-left text-xs">
-          <thead>
-            <tr className="border-b border-gray-100 text-[10px] uppercase font-bold text-gray-400 tracking-wider">
-              <th className="pb-3">Competency</th>
-              <th className="pb-3">Domain</th>
-              <th className="pb-3 text-center">Current</th>
-              <th className="pb-3 text-center">Required</th>
-              <th className="pb-3 text-center">Skill Gap</th>
-              <th className="pb-3 text-center">Priority</th>
-              <th className="pb-3 text-right">Action</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-50 text-gray-700">
-            {gaps.map((g) => (
-              <tr key={g.competencyId} className="hover:bg-gray-50/60">
-                <td className="py-3 font-bold text-[#0B3D66]">{g.competencyName}</td>
-                <td className="py-3 text-gray-500">{g.domain}</td>
-                <td className="py-3 text-center font-semibold">{g.currentLevel} / 5</td>
-                <td className="py-3 text-center font-semibold">{g.requiredLevel} / 5</td>
-                <td className="py-3 text-center">
-                  <span className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${g.gap > 0 ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-800"}`}>
-                    {g.gap > 0 ? `−${g.gap}` : "0"}
-                  </span>
-                </td>
-                <td className="py-3 text-center">
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${g.priorityLevel === "High" ? "bg-rose-500 text-white" : g.priorityLevel === "Medium" ? "bg-amber-400 text-gray-900" : "bg-gray-200 text-gray-700"}`}>
-                    {g.priorityLevel}
-                  </span>
-                </td>
-                <td className="py-3 text-right">
-                  <button
-                    onClick={() => setSelectedSkill(g)}
-                    className="text-xs text-[#0B3D66] font-bold hover:underline cursor-pointer"
-                  >
-                    Why is this a gap? →
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Why is this a gap modal */}
-      {selectedSkill && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl p-6 max-w-md w-full space-y-4 shadow-2xl animate-in zoom-in-95">
-            <div className="flex justify-between items-start">
-              <h3 className="font-bold text-sm text-[#0B3D66]">{selectedSkill.competencyName}</h3>
-              <button onClick={() => setSelectedSkill(null)} className="text-gray-400 hover:text-gray-600">✕</button>
-            </div>
-            <div className="space-y-2 text-xs text-gray-700">
-              <div>• <strong>Required for Role:</strong> Level {selectedSkill.requiredLevel} / 5</div>
-              <div>• <strong>Current Evaluation:</strong> Level {selectedSkill.currentLevel} / 5</div>
-              <div>• <strong>Calculated Gap:</strong> {selectedSkill.gap} Levels</div>
-              <div>• <strong>Evidence:</strong> {selectedSkill.evidenceSource}</div>
-              <div className="p-3 bg-blue-50 rounded-xl text-[11px] text-[#0B3D66]">
-                <strong>Recommended Action:</strong> Complete the accredited iGOT module to elevate competency level and meet role benchmark.
-              </div>
-            </div>
-            <button
-              onClick={() => {
-                setSelectedSkill(null);
-                onNav("courses");
-              }}
-              className="w-full py-2.5 bg-[#0B3D66] text-white text-xs font-bold rounded-xl"
-            >
-              View Remedial Courses →
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+function SkillGapsScreen({
+  onNav,
+  onOpenCourse,
+}: {
+  onNav: (s: Screen) => void;
+  onOpenCourse?: (c: CourseItem) => void;
+}) {
+  return <SkillGapAnalysis onNav={onNav} onOpenCourse={onOpenCourse} />;
 }
 
 // ──────────────────────────────────────────────
@@ -2234,25 +2163,6 @@ function CoursesScreen({
           <p className="text-xs text-gray-500 mt-0.5">
             Explore accredited learning resources aligned with your statistical cadre competencies.
           </p>
-        </div>
-
-        <div className="flex items-center gap-2 flex-wrap">
-          <a
-            href="/igot_courses_with_video_links.csv"
-            download="igot_courses_with_video_links.csv"
-            className="px-3.5 py-2 bg-white border border-gray-200 hover:border-blue-300 text-xs font-bold text-[#0B3D66] rounded-xl shadow-2xs hover:shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>📥</span>
-            <span>Export iGOT CSV</span>
-          </a>
-          <a
-            href="/nssta_courses_and_programmes_registration.csv"
-            download="nssta_courses_and_programmes_registration.csv"
-            className="px-3.5 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-xs font-bold text-white rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
-          >
-            <span>📥</span>
-            <span>Export NSSTA CSV</span>
-          </a>
         </div>
       </div>
 
@@ -2471,7 +2381,28 @@ function CourseDetailScreen({
 // ──────────────────────────────────────────────
 
 function TrainingProgrammesScreen() {
-  const programmes = getNsstaProgrammes();
+  const [programmes, setProgrammes] = useState<NsstaTrainingProgramme[]>(getNsstaProgrammes());
+  const [selectedProg, setSelectedProg] = useState<NsstaTrainingProgramme | null>(null);
+  const [registeredIds, setRegisteredIds] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      return JSON.parse(localStorage.getItem("statskill_nssta_registrations") || "[]");
+    } catch {
+      return [];
+    }
+  });
+
+  function handleNominationSuccess(progId: string) {
+    const updatedRegs = [...registeredIds, progId];
+    setRegisteredIds(updatedRegs);
+    localStorage.setItem("statskill_nssta_registrations", JSON.stringify(updatedRegs));
+
+    const updatedProgrammes = programmes.map((p) =>
+      p.id === progId ? { ...p, enrolledCount: Math.min(p.seatCapacity, p.enrolledCount + 1) } : p
+    );
+    setProgrammes(updatedProgrammes);
+    localStorage.setItem("statskill_programmes", JSON.stringify(updatedProgrammes));
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -2482,46 +2413,59 @@ function TrainingProgrammesScreen() {
             Accredited in-person and executive residential training programmes at NSSTA Greater Noida.
           </p>
         </div>
-
-        <a
-          href="/nssta_courses_and_programmes_registration.csv"
-          download="nssta_courses_and_programmes_registration.csv"
-          className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-xs font-bold text-white rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
-        >
-          <span>📥</span>
-          <span>Download NSSTA Programmes CSV</span>
-        </a>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {programmes.map((p) => (
-          <div key={p.id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs flex flex-col justify-between space-y-4">
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md">
-                  NSSTA TPAC · {p.deliveryMode}
-                </span>
-                <span className="text-xs font-bold text-[#FF7A00] font-mono">{p.schedule}</span>
-              </div>
-              <h3 className="text-sm font-bold text-gray-900">{p.programmeName}</h3>
-              <p className="text-xs text-gray-500">{p.description}</p>
-              <div className="text-[11px] text-gray-600 bg-gray-50 p-3 rounded-xl space-y-1 border border-gray-100">
-                <div><strong>Target:</strong> {p.targetAudience}</div>
-                <div><strong>Eligibility:</strong> {p.eligibility}</div>
-              </div>
-            </div>
+        {programmes.map((p) => {
+          const isRegistered = registeredIds.includes(p.id);
+          const seatsLeft = Math.max(0, p.seatCapacity - p.enrolledCount);
 
-            <a
-              href={p.registrationUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="w-full py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] text-center block"
-            >
-              Register on NSSTA Portal ↗
-            </a>
-          </div>
-        ))}
+          return (
+            <div key={p.id} className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs flex flex-col justify-between space-y-4 hover:shadow-md transition-shadow">
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-900 px-2 py-0.5 rounded-md">
+                    NSSTA TPAC · {p.deliveryMode}
+                  </span>
+                  <span className="text-xs font-bold text-[#FF7A00] font-mono">{p.schedule}</span>
+                </div>
+                <h3 className="text-sm font-bold text-gray-900">{p.programmeName}</h3>
+                <p className="text-xs text-gray-500">{p.description}</p>
+                <div className="text-[11px] text-gray-600 bg-gray-50 p-3 rounded-xl space-y-1 border border-gray-100">
+                  <div><strong>Target:</strong> {p.targetAudience}</div>
+                  <div><strong>Eligibility:</strong> {p.eligibility}</div>
+                  <div className="flex justify-between text-[10px] text-gray-500 pt-1.5 border-t border-gray-200/60 font-mono">
+                    <span>Capacity: {p.seatCapacity} seats</span>
+                    <span className={seatsLeft <= 5 ? "text-rose-600 font-bold" : "text-emerald-700 font-bold"}>
+                      {seatsLeft > 0 ? `${seatsLeft} seats remaining` : "Batch Full (Waitlist)"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {isRegistered ? (
+                <div className="w-full py-2.5 bg-emerald-50 text-emerald-800 border border-emerald-300 text-xs font-bold rounded-xl text-center flex items-center justify-center gap-1.5 shadow-2xs">
+                  <span>✓ Official Nomination Confirmed</span>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setSelectedProg(p)}
+                  className="w-full py-2.5 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl text-center block transition-all shadow-xs cursor-pointer"
+                >
+                  Register for Programme →
+                </button>
+              )}
+            </div>
+          );
+        })}
       </div>
+
+      <NsstaRegistrationModal
+        programme={selectedProg}
+        isOpen={Boolean(selectedProg)}
+        onClose={() => setSelectedProg(null)}
+        onSuccess={handleNominationSuccess}
+      />
     </div>
   );
 }
@@ -4128,7 +4072,7 @@ export default function App() {
             />
           )}
           {screen === "assessment_result" && <AssessmentResultScreen questions={activeQuestions} answers={activeAnswers} onNav={setScreen} />}
-          {screen === "skill_gaps" && <SkillGapsScreen onNav={setScreen} />}
+          {screen === "skill_gaps" && <SkillGapsScreen onNav={setScreen} onOpenCourse={setActiveCourse} />}
           {screen === "learning_path" && <LearningPathScreen onNav={setScreen} onOpenCourse={setActiveCourse} />}
           {screen === "courses" && <CoursesScreen onNav={setScreen} onOpenCourse={setActiveCourse} />}
           {screen === "course_detail" && <CourseDetailScreen course={activeCourse} onBack={() => setScreen("courses")} onNav={setScreen} />}

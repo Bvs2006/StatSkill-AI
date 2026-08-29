@@ -1,152 +1,156 @@
 import React, { useState, useEffect } from "react";
 import { LearningModeSwitcher, type LearningMode } from "./LearningModeSwitcher";
 import { YouTubePlayer, type TranscriptItem } from "./YouTubePlayer";
-import { AISlidePlayer, type AISlide, type LectureSegment } from "./AISlidePlayer";
+import { AISlidePlayer, type AISlide } from "./AISlidePlayer";
 import { TopicSidebar, type TopicItem } from "./TopicSidebar";
 import { TopicQuizModal, type QuizQuestion } from "./TopicQuizModal";
 import { AITutorDrawer } from "./AITutorDrawer";
 import { CourseItem, applyClosedLoopCompetencyUpdate, issueDigitalCredential } from "../../services/storageService";
+import { getRichCourseDetail } from "../../services/courseContentData";
 
 interface CourseLearningPageProps {
   course: CourseItem;
   onBack: () => void;
 }
 
-const DEFAULT_TOPICS: TopicItem[] = [
-  {
-    id: "top-101-1",
-    title: "1. Introduction to Official Data Science with Python",
-    sequence_order: 1,
-    duration_minutes: 15,
-    description: "Setting up Python 3.11 environment, NumPy arrays, and reproducible government statistical workflows.",
-  },
-  {
-    id: "top-101-2",
-    title: "2. Pandas DataFrames for NSSO Microdata Ingestion",
-    sequence_order: 2,
-    duration_minutes: 20,
-    description: "Parsing fixed-width text files, handling missing codes, and cleaning million-row survey records.",
-  },
-  {
-    id: "top-101-3",
-    title: "3. Survey Multiplier Weighting & Stratification Math",
-    sequence_order: 3,
-    duration_minutes: 25,
-    description: "Applying sub-sample multipliers, design weights, and estimating population totals with standard errors.",
-  },
-  {
-    id: "top-101-4",
-    title: "4. Statistical Visualizations with Matplotlib & Seaborn",
-    sequence_order: 4,
-    duration_minutes: 20,
-    description: "Visualizing price distributions, Lorenz curves, and demographic pyramids for cabinet summaries.",
-  },
-  {
-    id: "top-101-5",
-    title: "5. Automated Report Generation & Export Pipelines",
-    sequence_order: 5,
-    duration_minutes: 20,
-    description: "Building automated Python scripts to generate periodic quarterly statistical bulletins.",
-  },
-];
-
-const DEFAULT_TRANSCRIPTS: Record<string, TranscriptItem[]> = {
-  "top-101-1": [
-    { id: "1", start_time: 0, end_time: 45, text: "Welcome to Python Data Science Foundations for Official Statistics." },
-    { id: "2", start_time: 45, end_time: 110, text: "In official government statistics, computational integrity and reproducibility are paramount." },
-    { id: "3", start_time: 110, end_time: 180, text: "NumPy arrays allow high-performance vectorized operations on survey indicators without slow Python loops." },
-    { id: "4", start_time: 180, end_time: 260, text: "By mastering vectorized transformations, we ensure consistent estimation across state and district levels." },
-  ],
-};
-
-const DEFAULT_SLIDES: Record<string, AISlide[]> = {
-  "top-101-1": [
-    {
-      slide_number: 1,
-      title: "Official Statistical Computing Architecture",
-      key_points: [
-        "Transition from manual spreadsheets to automated code pipelines",
-        "High-performance vectorized NumPy operations for survey data",
-        "Strict reproducibility and compliance with MoSPI standards",
-      ],
-      explanation: "Official statistical production requires automated data verification scripts that produce verifiable audit trails.",
-      example: "Automating PLFS quarterly multiplier validation with vectorized array operations.",
-    },
-    {
-      slide_number: 2,
-      title: "Vectorized Computations & Imputation",
-      key_points: [
-        "Memory-efficient in-place arithmetic on survey weights",
-        "Avoid Python for-loops on multi-million row census records",
-        "Handling missing codes (e.g. 99, 999) using np.nan masking",
-      ],
-      explanation: "Vectorized computations execute in optimized C routines, completing nationwide survey aggregations in seconds.",
-      example: "df['adj_weight'] = np.where(df['stratum'] == 1, df['weight'] * 1.05, df['weight'])",
-    },
-    {
-      slide_number: 3,
-      title: "Reproducibility & Quality Assurance",
-      key_points: [
-        "Deterministic random seeds for sample splits",
-        "Automated assertion checks on control totals",
-        "Standardized National Metadata Framework exports",
-      ],
-      explanation: "Ensuring any statistical officer can execute the same script and obtain identical published tables.",
-      example: "assert df['population_weight'].sum() == published_census_benchmark",
-    },
-  ],
-};
-
-const DEFAULT_QUIZ_QUESTIONS: Record<string, QuizQuestion[]> = {
-  "top-101-1": [
-    {
-      id: 1,
-      question: "Why is vectorization preferred over standard Python for-loops for processing nationwide survey data?",
-      options: [
-        "It uses optimized C routines for orders-of-magnitude faster execution",
-        "It eliminates the need for RAM memory",
-        "It automatically corrects field survey entry errors",
-        "It converts all text strings into encrypted integers",
-      ],
-      correct_answer_index: 0,
-      explanation: "Vectorized operations in NumPy/Pandas leverage SIMD C instructions, avoiding Python interpreter overhead across millions of records.",
-    },
-    {
-      id: 2,
-      question: "Which NumPy function is standardly used to mask missing survey codes (e.g. 999) without losing data type integrity?",
-      options: ["np.nan", "np.delete()", "np.zero()", "np.empty()"],
-      correct_answer_index: 0,
-      explanation: "np.nan represents floating-point Not-a-Number, allowing statistical aggregations to skip missing survey responses.",
-    },
-    {
-      id: 3,
-      question: "What is the primary benefit of deterministic random seeds in official survey simulation and bootstrapping?",
-      options: [
-        "Ensures identical reproducible sampling results across independent verifications",
-        "Increases server execution speed by 50%",
-        "Encrypts the survey responses against unauthorized access",
-        "Compresses the dataset into gzip format automatically",
-      ],
-      correct_answer_index: 0,
-      explanation: "Setting a deterministic seed ensures any external auditor or ministry committee reproduces exact identical sample draws.",
-    },
-  ],
-};
-
 export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) {
   const [activeMode, setActiveMode] = useState<LearningMode>("youtube");
-  const [currentTopicId, setCurrentTopicId] = useState<string>("top-101-1");
-  const [completedTopicIds, setCompletedTopicIds] = useState<string[]>(["top-101-1", "top-101-2"]);
-  const [currentVideoTime, setCurrentVideoTime] = useState<number>(120);
+  const [currentVideoTime, setCurrentVideoTime] = useState<number>(0);
   const [currentSlide, setCurrentSlide] = useState<number>(1);
   const [quizOpen, setQuizOpen] = useState<boolean>(false);
   const [tutorOpen, setTutorOpen] = useState<boolean>(false);
 
-  const topics = DEFAULT_TOPICS;
-  const currentTopic = topics.find((t) => t.id === currentTopicId) || topics[0];
-  const transcripts = DEFAULT_TRANSCRIPTS[currentTopicId] || DEFAULT_TRANSCRIPTS["top-101-1"];
-  const slides = DEFAULT_SLIDES[currentTopicId] || DEFAULT_SLIDES["top-101-1"];
-  const quizQuestions = DEFAULT_QUIZ_QUESTIONS[currentTopicId] || DEFAULT_QUIZ_QUESTIONS["top-101-1"];
+  // Load rich course detail for the specific course
+  const richDetail = getRichCourseDetail(course.id, course.title);
+
+  // Convert rich chapters to TopicItem[]
+  const topics: TopicItem[] = (richDetail.chapters && richDetail.chapters.length > 0)
+    ? richDetail.chapters.map((ch, idx) => ({
+        id: `${course.id}-ch-${ch.id}`,
+        title: ch.title,
+        sequence_order: idx + 1,
+        duration_minutes: parseInt(ch.duration) || 20,
+        description: ch.summary,
+      }))
+    : [
+        {
+          id: `${course.id}-ch-1`,
+          title: `1. Foundations of ${course.title}`,
+          sequence_order: 1,
+          duration_minutes: 20,
+          description: "Core fundamental principles and methodological framework.",
+        },
+      ];
+
+  const [currentTopicId, setCurrentTopicId] = useState<string>(topics[0]?.id || `${course.id}-ch-1`);
+  const [completedTopicIds, setCompletedTopicIds] = useState<string[]>([topics[0]?.id || `${course.id}-ch-1`]);
+
+  // Sync currentTopicId when course changes
+  useEffect(() => {
+    if (topics[0]?.id) {
+      setCurrentTopicId(topics[0].id);
+      setCompletedTopicIds([topics[0].id]);
+      setCurrentSlide(1);
+      setCurrentVideoTime(0);
+    }
+  }, [course.id]);
+
+  const currentTopicIndex = Math.max(0, topics.findIndex((t) => t.id === currentTopicId));
+  const currentTopic = topics[currentTopicIndex] || topics[0];
+  const activeChapter = richDetail.chapters[currentTopicIndex] || richDetail.chapters[0];
+  const activeYoutubeId = activeChapter?.youtubeId || richDetail.youtubeId || "d8uTB5XorBw";
+
+  // Dynamic transcripts from richDetail
+  const transcripts: TranscriptItem[] = (richDetail.transcript && richDetail.transcript.length > 0)
+    ? richDetail.transcript.map((t, idx) => {
+        const parts = t.time.split(":");
+        const startSec = (parseInt(parts[0]) || 0) * 60 + (parseInt(parts[1]) || 0);
+        return {
+          id: String(idx + 1),
+          start_time: startSec,
+          end_time: startSec + 45,
+          text: `[${t.speaker}] ${t.text}`,
+        };
+      })
+    : [
+        { id: "1", start_time: 0, end_time: 40, text: `Welcome to the official session on ${currentTopic.title}.` },
+        { id: "2", start_time: 40, end_time: 90, text: `In this module we explore standardized MoSPI frameworks for ${course.primaryCompetency}.` },
+      ];
+
+  // Dynamic slides for the active chapter
+  const slides: AISlide[] = [
+    {
+      slide_number: 1,
+      title: activeChapter ? activeChapter.title : currentTopic.title,
+      key_points: richDetail.keyTakeaways || [
+        "Core concepts and regulatory guidelines under MoSPI frameworks",
+        "Standardized calculation methodology and data flows",
+        "Implementation and audit compliance protocols",
+      ],
+      explanation: activeChapter ? activeChapter.summary : `Comprehensive analysis of ${currentTopic.title} for statistical officers.`,
+      example: richDetail.formulas && richDetail.formulas[0]
+        ? `${richDetail.formulas[0].name}: ${richDetail.formulas[0].latex}`
+        : "Standard operational procedure in state and national directorates.",
+    },
+    {
+      slide_number: 2,
+      title: "Methodological Derive & Formula Standards",
+      key_points: (richDetail.formulas || []).map((f) => `${f.name}: ${f.explanation}`),
+      explanation: richDetail.formulas && richDetail.formulas[0] ? richDetail.formulas[0].explanation : "Statistical estimation methodology.",
+      example: richDetail.formulas && richDetail.formulas[0] ? richDetail.formulas[0].latex : "Y_hat = sum(W_i * Y_i)",
+    },
+    {
+      slide_number: 3,
+      title: "Practical Case Studies & Governance Quality",
+      key_points: [
+        "Verification against administrative control totals and benchmark registers",
+        "Strict adherence to official NSSTA and iGOT evaluation standards",
+        "Integration into quarterly MoSPI bulletins and executive dashboards",
+      ],
+      explanation: "Ensuring high accuracy, reproducibility, and compliance in national statistical operations.",
+      example: "Automated assertion checks and cross-validation pipelines.",
+    },
+  ];
+
+  // Dynamic quiz questions for the active chapter
+  const quizQuestions: QuizQuestion[] = [
+    {
+      id: 1,
+      question: `What is the primary methodological objective of ${currentTopic.title}?`,
+      options: [
+        `Ensure standardized, unbiased estimation and audit compliance under ${course.primaryCompetency}`,
+        "Eliminate all data collection requirements from field offices",
+        "Replace government databases with unverified public web sources",
+        "Generate random baseline numbers for immediate publication",
+      ],
+      correct_answer_index: 0,
+      explanation: `Standardized official methodologies ensure computational consistency and statutory compliance across central and state directorates.`,
+    },
+    {
+      id: 2,
+      question: `In the context of ${course.title}, what guarantees data reliability?`,
+      options: [
+        "Rigorous formula adherence, sampling multiplier weights, and validation checks",
+        "Discarding all outlier survey responses without documentation",
+        "Manual subjective estimation by local field staff",
+        "Limiting survey sample sizes to single digits",
+      ],
+      correct_answer_index: 0,
+      explanation: `MoSPI standards mandate explicit multiplier weights, documented formula implementations, and multi-tier quality checks.`,
+    },
+    {
+      id: 3,
+      question: `How are competencies in ${course.primaryCompetency} verified for official accreditation?`,
+      options: [
+        "Through verified modular assessments, virtual labs, and closed-loop competency evaluations",
+        "By attending without taking interactive quizzes or labs",
+        "By submitting unverified manual logs without digital signatures",
+        "Competencies are fixed at recruitment and cannot be upgraded",
+      ],
+      correct_answer_index: 0,
+      explanation: `StatSkill AI applies closed-loop competency updates and cryptographic W3C verifiable credentials upon demonstrated mastery.`,
+    },
+  ];
 
   const progressPct = Math.round((completedTopicIds.length / topics.length) * 100);
 
@@ -226,7 +230,7 @@ export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) 
         <div className="order-1 lg:order-2 lg:col-span-8 space-y-4">
           {activeMode === "youtube" ? (
             <YouTubePlayer
-              videoId="r-uOLxNrNk8"
+              videoId={activeYoutubeId}
               title={currentTopic.title}
               transcripts={transcripts}
               currentTime={currentVideoTime}
@@ -269,6 +273,7 @@ export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) 
             onSelectTopic={(tId) => {
               setCurrentTopicId(tId);
               setCurrentSlide(1);
+              setCurrentVideoTime(0);
             }}
             overallProgressPct={progressPct}
           />
