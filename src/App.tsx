@@ -70,10 +70,15 @@ import {
   generateValidatedMCQsFromDocument,
   validateMCQ,
   chatWithStatisticalAssistant,
+  hasGroqApiKey,
+  getGroqApiKey,
+  setGroqApiKey,
   type GeneratedQuestion,
   type ValidatedTrainerMCQ,
 } from "./services/aiService";
 
+import { semanticSearchCourses } from "./services/sentenceTransformer";
+import { ApiKeyModal } from "./components/ApiKeyModal";
 import { extractTextFromFile } from "./services/documentParser";
 import { LiveTerminalModal, OFFICIAL_LAB_EXERCISES, type LabExercise } from "./components/LiveTerminal";
 import { LecturePlayer } from "./components/LecturePlayer";
@@ -444,6 +449,15 @@ function Topbar({
           </button>
         </div>
 
+        {/* Groq Cloud AI Engine Status */}
+        <div
+          className="flex items-center gap-1.5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-300 shadow-2xs"
+          title="Groq Cloud LLaMA 3.3 AI Connected via .env"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>⚡ Groq AI Active</span>
+        </div>
+
         {/* iGOT Adapter Status Badge */}
         <button
           onClick={() => setIgotModalOpen(true)}
@@ -523,6 +537,11 @@ function Topbar({
       <IgotAdapterModal
         isOpen={igotModalOpen}
         onClose={() => setIgotModalOpen(false)}
+      />
+
+      <ApiKeyModal
+        isOpen={apiKeyModalOpen}
+        onClose={() => setApiKeyModalOpen(false)}
       />
     </header>
   );
@@ -2170,13 +2189,38 @@ function CoursesScreen({
   const [search, setSearch] = useState("");
   const [sourceFilter, setSourceFilter] = useState<"ALL" | "iGOT" | "NSSTA">("ALL");
   const [categoryFilter, setCategoryFilter] = useState<string>("ALL");
+  const [semanticScores, setSemanticScores] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    if (!search.trim()) {
+      setSemanticScores({});
+      return;
+    }
+    let isMounted = true;
+    semanticSearchCourses(search, courses).then((results) => {
+      if (isMounted) {
+        const scoreMap: Record<string, number> = {};
+        results.forEach((r) => {
+          if (r.similarityScore > 0.15) {
+            scoreMap[r.course.id] = Math.round(r.similarityScore * 100);
+          }
+        });
+        setSemanticScores(scoreMap);
+      }
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, [search, courses]);
 
   const filtered = courses.filter((c) => {
     if (sourceFilter !== "ALL" && c.provider !== sourceFilter) return false;
     if (categoryFilter !== "ALL" && c.category !== categoryFilter) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
-      return c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+      const textMatch = c.title.toLowerCase().includes(q) || c.description.toLowerCase().includes(q);
+      const vectorMatch = Boolean(semanticScores[c.id]);
+      return textMatch || vectorMatch;
     }
     return true;
   });
@@ -2269,9 +2313,16 @@ function CoursesScreen({
                     <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md border border-white/20 text-white shadow-xs">
                       {c.level || "Intermediate"}
                     </span>
-                    <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-md">
-                      {c.provider} Karmayogi
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {semanticScores[c.id] && (
+                        <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500 text-white shadow-xs">
+                          ✨ {semanticScores[c.id]}% Match
+                        </span>
+                      )}
+                      <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-400 text-amber-950 shadow-md">
+                        {c.provider} Karmayogi
+                      </span>
+                    </div>
                   </div>
 
                   <div className="flex justify-between items-end">
@@ -2682,6 +2733,7 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
   const [loading, setLoading] = useState(false);
   const [elevateNotice, setElevateNotice] = useState<string | null>(null);
   const [activeStage, setActiveStage] = useState<"assess" | "gap" | "learn" | "elevate">("assess");
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
 
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -2841,11 +2893,20 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
         </div>
 
         {/* Right Header Officer Context & Tools */}
-        <div className="relative z-10 flex items-center gap-2 self-start md:self-auto">
+        <div className="relative z-10 flex items-center gap-2 self-start md:self-auto flex-wrap">
           <div className="bg-white/10 backdrop-blur-md px-3.5 py-1.5 rounded-xl border border-white/15 text-right hidden sm:block">
             <div className="text-xs font-bold text-white truncate">{profile.name || "Dr. Rajesh Sharma, ISS"}</div>
             <div className="text-[10px] text-amber-300 font-bold">{profile.cadreGrade || "STS"} · {profile.department || "Labour Statistics"}</div>
           </div>
+
+          <div
+            className="px-3 py-1.5 rounded-xl border border-emerald-400/40 bg-emerald-500/20 text-emerald-300 text-xs font-bold flex items-center gap-1.5 shadow-xs select-none"
+            title="Groq Cloud LLaMA 3.3 70B Active (.env)"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>⚡ Groq LLaMA 3.3 Active</span>
+          </div>
+
           <button
             onClick={handleClearHistory}
             className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white transition-all text-xs font-bold cursor-pointer"
@@ -3021,6 +3082,11 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
           </div>
         </div>
       </div>
+
+      <ApiKeyModal
+        isOpen={apiKeyModalOpen}
+        onClose={() => setApiKeyModalOpen(false)}
+      />
     </div>
   );
 }

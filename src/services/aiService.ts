@@ -14,28 +14,100 @@ export interface GeneratedQuestion {
   source?: "ai" | "mock";
 }
 
-const GROQ_STORAGE_KEY = "diid_groq_api_key";
+const GROQ_STORAGE_KEYS = ["diid_groq_api_key", "statskill_groq_api_key", "groq_api_key"];
 
 export function getGroqApiKey(): string {
-  if (typeof window === "undefined") return "";
+  // 1. Vite environment variable from .env or Vercel Environment Variables
   const envKey = (import.meta as any).env?.VITE_GROQ_API_KEY;
   if (envKey && String(envKey).trim() && !String(envKey).includes("your_groq_free_key")) {
     return String(envKey).trim();
   }
-  return localStorage.getItem(GROQ_STORAGE_KEY) || "";
+
+  // 2. Check browser localStorage
+  if (typeof window !== "undefined") {
+    for (const k of GROQ_STORAGE_KEYS) {
+      const val = localStorage.getItem(k);
+      if (val && val.trim()) {
+        return val.trim();
+      }
+    }
+  }
+
+  return "";
 }
 
 export function setGroqApiKey(key: string): void {
   if (typeof window === "undefined") return;
-  if (key.trim()) {
-    localStorage.setItem(GROQ_STORAGE_KEY, key.trim());
+  const clean = key.trim();
+  if (clean) {
+    for (const k of GROQ_STORAGE_KEYS) {
+      localStorage.setItem(k, clean);
+    }
   } else {
-    localStorage.removeItem(GROQ_STORAGE_KEY);
+    for (const k of GROQ_STORAGE_KEYS) {
+      localStorage.removeItem(k);
+    }
   }
 }
 
 export function hasGroqApiKey(): boolean {
-  return Boolean(getGroqApiKey());
+  const key = getGroqApiKey();
+  return Boolean(key && key.trim());
+}
+
+export const GROQ_PREFERRED_MODELS = [
+  "openai/gpt-oss-120b",
+  "qwen/qwen3.8-27b",
+  "openai/gpt-oss-20b",
+  "qwen/qwen3.6-27b",
+  "llama-3.3-70b-versatile",
+  "llama-3.1-8b-instant",
+];
+
+/**
+ * Universal resilient Groq Cloud API caller with multi-model fallback
+ */
+export async function callGroqChatCompletion(
+  apiKey: string,
+  messages: { role: string; content: string }[],
+  options: { temperature?: number; max_tokens?: number; jsonMode?: boolean } = {}
+): Promise<{ text: string; model: string } | null> {
+  for (const model of GROQ_PREFERRED_MODELS) {
+    try {
+      const payload: any = {
+        model,
+        messages,
+        temperature: options.temperature ?? 0.4,
+        max_tokens: options.max_tokens ?? 1200,
+      };
+      if (options.jsonMode) {
+        payload.response_format = { type: "json_object" };
+      }
+
+      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        const content = data.choices?.[0]?.message?.content;
+        if (content && content.trim()) {
+          return { text: content.trim(), model };
+        }
+      } else {
+        const err = await res.text();
+        console.warn(`[Groq AI] Model ${model} returned ${res.status}:`, err);
+      }
+    } catch (e: any) {
+      console.warn(`[Groq AI] Network error for model ${model}:`, e.message);
+    }
+  }
+  return null;
 }
 
 /**
@@ -59,15 +131,17 @@ export async function generateMCQsFromText(
   }
 
   const prompt = `You are a Senior Technical & Statistical Assessment Officer for India's Ministry of Statistics and Programme Implementation (MoSPI) and NSSTA.
-Generate exactly ${count} completely unique, brand-new, objective Multiple Choice Questions (MCQs) for batch [${randomSeed}].
+Generate ${count} completely unique multiple choice questions based on the uploaded document or syllabus below.
 
-Subject / Text:
+Seed: ${randomSeed}
+
+DOCUMENT CONTENT:
 """
-${content.slice(0, 8000)}
+${content.slice(0, 15000)}
 """
 
-Specifications:
-- Domain: ${domain} (Statistical, Technical, Digital Governance, Behavioural)
+CRITICAL REQUIREMENTS:
+- Domain: ${domain}
 - Difficulty: ${difficulty}
 - Each question must have 4 plausible, realistic options.
 - The correct answer index must vary across 0, 1, 2, 3 (do NOT always make 0 correct).
@@ -91,27 +165,17 @@ Return ONLY valid JSON matching this exact structure:
 }`;
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [
-          { role: "system", content: "You are a specialized JSON exam API for India's Ministry of Statistics. You always return a valid JSON object containing a questions array." },
-          { role: "user", content: prompt },
-        ],
-        temperature: 0.7,
-        max_tokens: 3000,
-        response_format: { type: "json_object" },
-      }),
-    });
+    const groqResult = await callGroqChatCompletion(
+      apiKey,
+      [
+        { role: "system", content: "You are a specialized JSON exam API for India's Ministry of Statistics. You always return a valid JSON object containing a questions array." },
+        { role: "user", content: prompt },
+      ],
+      { jsonMode: true, max_tokens: 3000, temperature: 0.7 }
+    );
 
-    if (!res.ok) {
-      const errText = await res.text();
-      console.warn("[AI Service] Falling back to mock data: Groq API error", errText);
+    if (!groqResult) {
+      console.warn("[AI Service] Falling back to mock data: Groq API unavailable");
       return {
         questions: generateDynamicFallbackQuestions(content, count, difficulty, domain),
         source: "mock",
@@ -470,46 +534,34 @@ export async function chatWithGroqAssistant(
   // Try live API if key is available, with full Closed-Loop Competency Framework
   if (apiKey) {
     try {
-      const systemPrompt = `You are the Official AI Competency Copilot for India's Ministry of Statistics and Programme Implementation (MoSPI), NSSTA, and the iGOT Karmayogi platform.
-You operate on the 4-stage Closed-Loop Competency Cycle:
-1. ASSESS: Generate diagnostic MCQs, evaluate officer answers, and test statistical concepts (UN SNA 2008, PLFS, CPI, Python/R, DPDP Act 2023).
-2. GAP ANALYSIS: Analyze skill gaps between current proficiency and target cadre expectations.
-3. LEARN: Recommend targeted iGOT/NSSTA courses, explain complex formulas with LaTeX, and provide real-world MoSPI case studies.
-4. ELEVATE: Validate competency mastery and explain how demonstrated skills elevate official competency levels and CPD hours.
+      const systemPrompt = `You are the Official Domain-Specific AI Statistical Copilot for India's Ministry of Statistics and Programme Implementation (MoSPI), NSSTA, and the iGOT Karmayogi platform.
+You have deep expertise in:
+1. UN System of National Accounts (SNA 2008), GVA compilation at basic prices, Supply-Use Tables (SUT), double deflation, FISIM, and quarterly GDP estimation.
+2. NSSO & PLFS survey methodologies, two-stage stratified PPS sampling, circular systematic selection of FSUs, and multiplier ($MLT / 200$) normalization.
+3. Price Statistics: CPI (Rural/Urban/Combined) with base 2012=100 using Modified Laspeyres Price Index, geometric means of price relatives, and WPI compilation.
+4. Industrial Statistics: Annual Survey of Industries (ASI), Index of Industrial Production (IIP 2011-12 base), NIC 2008 5-digit classification.
+5. Digital Governance & Data Privacy: DPDP Act 2023 compliance, $k$-anonymity, $l$-diversity, differential privacy, and statistical disclosure control for microdata.gov.in.
+6. Geospatial Frame Updating: QGIS, Urban Frame Survey (UFS) block digitization, satellite imagery reconciliation.
+7. Python/R automation for multi-gigabyte fixed-width official survey text files (Pandas chunking, NumPy, Statsmodels).
 
-Current Officer: ${userContext?.name || "Officer"}, Designation: ${userContext?.designation || "Statistical Officer"}, Department: ${userContext?.department || "MoSPI"}.
+Current Officer: ${userContext?.name || "Statistical Officer"}, Designation: ${userContext?.designation || "Statistical Officer"}, Department: ${userContext?.department || "MoSPI"}.
 Active Skill Gaps: ${userContext?.gaps?.join(", ") || "Sampling Theory, National Accounts, Python Automation"}.
-Format responses with clean Markdown, clear headings, bullet points, and LaTeX equations where appropriate.`;
+Always provide mathematically rigorous, domain-specific, and institutional answers with LaTeX formulas and Python code where relevant.`;
 
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...conversationHistory.slice(-8),
-          ],
-          temperature: 0.5,
-          max_tokens: 1200,
-        }),
-      });
+      const groqResult = await callGroqChatCompletion(
+        apiKey,
+        [
+          { role: "system", content: systemPrompt },
+          ...conversationHistory.slice(-8),
+        ],
+        { temperature: 0.4, max_tokens: 1200 }
+      );
 
-      if (res.ok) {
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content && content.trim()) {
-          return { text: content.trim(), source: "ai" };
-        }
-      } else {
-        const errText = await res.text();
-        console.warn("[AI Service] Falling back to built-in engine: Groq API error", errText);
+      if (groqResult && groqResult.text.trim()) {
+        return { text: groqResult.text.trim(), source: "ai" };
       }
     } catch (err: any) {
-      console.warn("[AI Service] Falling back to built-in engine: network error", err.message);
+      console.warn("[AI Service] Network error calling Groq:", err.message);
     }
   }
 
@@ -519,7 +571,6 @@ Format responses with clean Markdown, clear headings, bullet points, and LaTeX e
   // 1. ASSESS Phase Queries
   if (lastUserMsg.includes("assess") || lastUserMsg.includes("quiz") || lastUserMsg.includes("test me") || lastUserMsg.includes("exam") || lastUserMsg.includes("question")) {
     responseText = `### ✍️ AI Competency Assessment Check: Official Statistics
-
 Here is a quick diagnostic challenge for your cadre profile:
 
 **Question 1: Periodic Labour Force Survey (PLFS) Sampling**
@@ -548,85 +599,117 @@ $$\\text{GVA at basic prices} = \\text{Gross Output} - \\text{Intermediate Consu
 #### 🔍 Identified Skill Gaps:
 ${gapList.map((g, i) => `${i + 1}. **${g}** — *Priority Deficit (Target Level 4 vs Current Level 2)*`).join("\n")}
 
-#### 🎯 Impact Analysis:
+#### 🎯 Institutional Cadre Impact:
 - **National Accounts**: Deficit in Supply-Use Tables (SUT) balances and double deflation methods.
 - **Microdata Processing**: Unit-level text extraction bottlenecks with raw NSS multi-gigabyte survey blocks.
-- **Recommended Action**: Proceed to the **Learn** phase to close these deficits with NSSTA & iGOT modules!`;
+- **Cadre Progression**: Closing these gaps adds up to 35 Continuous Professional Development (CPD) credit hours.`;
   }
-  // 3. ELEVATE Phase Queries
-  else if (lastUserMsg.includes("elevate") || lastUserMsg.includes("upgrade") || lastUserMsg.includes("advance") || lastUserMsg.includes("promote") || lastUserMsg.includes("level up")) {
-    responseText = `### ⚡ Closed-Loop Competency Elevation Protocol
+  // 3. ASI & Industrial Statistics
+  else if (lastUserMsg.includes("asi") || lastUserMsg.includes("industry") || lastUserMsg.includes("iip") || lastUserMsg.includes("factory")) {
+    responseText = `### 🏭 Annual Survey of Industries (ASI) & Index of Industrial Production (IIP)
 
-To elevate your competency level from **Current (Level 2/3)** to **Target (Level 4/5 - Practitioner/Expert)**:
+**Institutional Mandate**:
+MoSPI compiles industrial statistics under the Collection of Statistics Act 2008 covering registered manufacturing factories (NIC-2008 2-digit to 5-digit).
 
-1. **Demonstrate Mastery**:
-   - Complete formative course quizzes ($\ge 80\\%$ score triggers instant +1 Level).
-   - Complete hands-on **Virtual Labs** (e.g. *CPI Laspeyres Lab* or *PLFS Multiplier Script*).
-2. **Audit Logging**:
-   - Every score elevation writes a cryptographic audit log with timestamp, evidence source, and evaluator hash.
-3. **Career Progression**:
-   - Accumulate 50 Continuous Professional Development (CPD) hours for annual cadre review.
-
-💡 *Would you like to take a micro-evaluation right now to elevate your **Python for Data Analysis** or **National Accounts** competency?*`;
+1. **ASI Sampling Scheme**:
+   - **Census Sector**: All units with 100+ workers (or in 6 less industrially developed states/UTs).
+   - **Sample Sector**: Remaining registered factories stratified by state $\\times$ 4-digit NIC $\\times$ employment size.
+2. **IIP Base Revision (2011-12=100)**:
+   $$I_{\\text{IIP}} = \\frac{\\sum (W_i \\times R_i)}{\\sum W_i}$$
+   where $W_i$ is value added weight and $R_i$ is the item production relative.`;
   }
-  // 4. LEARN & Specific Domain Queries
+  // 4. GIS & Geospatial
+  else if (lastUserMsg.includes("gis") || lastUserMsg.includes("qgis") || lastUserMsg.includes("map") || lastUserMsg.includes("ufs") || lastUserMsg.includes("geospatial")) {
+    responseText = `### 🗺️ GIS & Geospatial Mapping for Urban Frame Survey (UFS)
+
+In Indian official statistical field operations:
+1. **Urban Frame Survey (UFS)**: Urban settlements are divided into non-overlapping blocks of 120–150 households with well-defined physical boundaries.
+2. **QGIS Integration**: Shapefile boundary digitizing, GPS coordinates reconciliation with cadastral maps, and thematic layer overlays.
+3. **Satellite Imagery Overlays**: Resolving rapid peri-urban fringe developments to update First Stage Unit (FSU) sampling frames before census enumeration.`;
+  }
+  // 5. Python & Survey Processing
+  else if (lastUserMsg.includes("python") || lastUserMsg.includes("code") || lastUserMsg.includes("pandas") || lastUserMsg.includes("script") || lastUserMsg.includes("sql")) {
+    responseText = `### 🐍 MoSPI Python Microdata Automation Pipeline
+
+For processing multi-gigabyte fixed-width NSSO/PLFS survey data:
+
+\`\`\`python
+import pandas as pd
+import numpy as np
+
+# 1. Memory-efficient chunked ingestion
+def process_plfs_microdata(filepath):
+    chunks = pd.read_csv(filepath, sep="|", chunksize=100_000, low_memory=False)
+    total_weighted_exp = 0.0
+    total_population = 0.0
+    
+    for chunk in chunks:
+        # Multiplier normalization: Divide integer MLT by 200 for pooled sub-samples
+        chunk['normalized_weight'] = chunk['MLT'] / 200.0
+        
+        # Filter valid consumer expenditure responses (exclude missing 99999)
+        valid = chunk[chunk['expenditure'] < 99990]
+        total_weighted_exp += (valid['expenditure'] * valid['normalized_weight']).sum()
+        total_population += valid['normalized_weight'].sum()
+        
+    avg_per_capita = total_weighted_exp / total_population
+    return {"estimated_population": total_population, "avg_monthly_exp": avg_per_capita}
+\`\`\`
+
+You can test this script live in the **Virtual Labs** sandbox!`;
+  }
+  // 6. National Accounts & GVA
   else if (lastUserMsg.includes("sna") || lastUserMsg.includes("national account") || lastUserMsg.includes("gva") || lastUserMsg.includes("gdp")) {
     responseText = `### 📊 UN System of National Accounts (SNA 2008) & GVA Compilation
 
-In Indian official statistics, **Gross Value Added (GVA)** at basic prices is compiled as:
-$$\\text{GVA at basic prices} = \\text{Gross Output} - \\text{Intermediate Consumption}$$
+In Indian official statistics:
+$$\\text{GVA at basic prices} = \\text{Gross Output at basic prices} - \\text{Intermediate Consumption at purchaser prices}$$
 
-Key institutional highlights:
-1. **Supply and Use Tables (SUT)**: Formulated at purchaser prices to balance domestic output, imports, intermediate consumption, and final demand.
-2. **Double Deflation**: Deflating gross output with product price indices (WPI/CPI) and intermediate consumption with commodity-specific input deflators.
-3. **Recommended Training**: Enrol in the NSSTA module *"UN SNA 2008 & GVA Compilation"* (18 hours) to master quarterly GDP revision algorithms.`;
-  } else if (lastUserMsg.includes("plfs") || lastUserMsg.includes("labour") || lastUserMsg.includes("employment") || lastUserMsg.includes("sampling")) {
+Key methodological components:
+1. **Supply-Use Tables (SUT)**: Balancing product supplies with domestic intermediate and final consumption.
+2. **Double Deflation**: Deflating gross output using wholesale price indices and intermediate inputs using commodity-specific input deflators.
+3. **FISIM (Financial Intermediation Services Indirectly Measured)**: Allocated across user industries based on deposit and loan distributions.`;
+  }
+  // 7. PLFS & Sampling
+  else if (lastUserMsg.includes("plfs") || lastUserMsg.includes("labour") || lastUserMsg.includes("employment") || lastUserMsg.includes("sampling")) {
     responseText = `### 📋 Periodic Labour Force Survey (PLFS) & Sampling Design
 
 PLFS adopts a **stratified two-stage sampling design**:
-- **First Stage Units (FSUs)**: 2011 Census villages in rural areas and Urban Frame Survey (UFS) blocks in urban areas, selected via **Probability Proportional to Size (PPS)** with circular systematic sampling.
+- **First Stage Units (FSUs)**: 2011 Census villages in rural areas and UFS blocks in urban areas, selected via **Probability Proportional to Size (PPS)** circular systematic sampling.
 - **Second Stage Units (SSUs)**: Sampled households selected after door-to-door listing.
-- **Multiplier Normalization**: When pooling Sub-sample 1 and Sub-sample 2, divide the integer multiplier ($MLT$) by **200** to compute unbiased population totals.
-
-You can calculate multipliers interactively in the **Virtual Labs** tab!`;
-  } else if (lastUserMsg.includes("cpi") || lastUserMsg.includes("wpi") || lastUserMsg.includes("price") || lastUserMsg.includes("inflation") || lastUserMsg.includes("laspeyres")) {
+- **Multiplier Normalization**: When pooling Sub-sample 1 and Sub-sample 2, divide the integer multiplier ($MLT$) by **200** to compute unbiased population totals.`;
+  }
+  // 8. CPI / WPI
+  else if (lastUserMsg.includes("cpi") || lastUserMsg.includes("wpi") || lastUserMsg.includes("price") || lastUserMsg.includes("inflation") || lastUserMsg.includes("laspeyres")) {
     responseText = `### 🏷️ Consumer Price Index (CPI) Compilation in India
 
 India compiles CPI (Rural, Urban, Combined) with base year $2012=100$ using the **Modified Laspeyres Price Index**:
-$$I_t = \\sum w_i \\times \\left( \\frac{P_{it}}{P_{i0}} \\right) \\times 100$$
-where $w_i$ represents the expenditure budget share from the Consumer Expenditure Survey.
+$$I_t = \\sum_{i=1}^{K} w_i \\times \\left( \\frac{P_{it}}{P_{i0}} \\right) \\times 100$$
+where $w_i$ is the commodity expenditure weight from the Consumer Expenditure Survey (CES), such that $\\sum w_i = 1$.`;
+  }
+  // 9. DPDP Act
+  else if (lastUserMsg.includes("dpdp") || lastUserMsg.includes("privacy") || lastUserMsg.includes("anonym") || lastUserMsg.includes("disclosure")) {
+    responseText = `### 🔒 Digital Personal Data Protection (DPDP) Act 2023 & SDC Protocols
 
-- **Data Ingestion**: Web portal & mobile app collection from 1,181 village markets and 1,114 urban blocks.
-- **Hands-on Practice**: Launch the *CPI Laspeyres Lab* in the Virtual Labs section to run real price index aggregation scripts.`;
-  } else if (lastUserMsg.includes("dpdp") || lastUserMsg.includes("privacy") || lastUserMsg.includes("anonym") || lastUserMsg.includes("disclosure")) {
-    responseText = `### 🔒 Digital Personal Data Protection (DPDP) Act 2023 & Statistical Disclosure Control
+For public microdata dissemination on *microdata.gov.in*:
+- **$k$-Anonymity & $l$-Diversity**: Preventing re-identification by aggregating quasi-identifiers (Age, District, Gender).
+- **Statistical Disclosure Control (SDC)**: Perturbing top 1% wealth/income values and microdata cell suppression for small geographic clusters.`;
+  }
+  // 10. General Default
+  else {
+    responseText = `### 🏛️ MoSPI & NSSTA Statistical AI Assistant
 
-For official survey dissemination, MoSPI enforces strict privacy safeguards:
-- **$k$-Anonymity**: Ensuring every combination of quasi-identifiers (Age, District, Gender) appears in at least $k$ records.
-- **Microdata Perturbation**: Noise infusion and top-coding on extreme income/asset variables before open data release on *microdata.gov.in*.
-- **Course Pathway**: Complete the 8-hour iGOT module *"DPDP Act & Statistical Disclosure Control"* to earn your Digital Governance badge.`;
-  } else if (lastUserMsg.includes("course") || lastUserMsg.includes("recommend") || lastUserMsg.includes("learn") || lastUserMsg.includes("train")) {
-    responseText = `### 🎯 Targeted Learning Recommendations for ${userContext?.name || "Officer"}
+Namaste **${userContext?.name || "Officer"}**! I am your dedicated **Domain-Specific AI Statistical Copilot** trained on official Government of India statistical methodologies.
 
-Based on your cadre profile as **${userContext?.designation || "Statistical Officer"}** (${userContext?.department || "MoSPI"}):
+#### 📚 Available Domain Competencies:
+1. **UN SNA 2008 & GVA**: GDP estimation, SUT balancing, and double deflation.
+2. **PLFS & NSSO Sampling**: Stratified 2-stage PPS design, multiplier ($MLT/200$) normalization.
+3. **Price Indices (CPI/WPI)**: Modified Laspeyres index compilation and elementary aggregation.
+4. **Industrial Statistics**: Annual Survey of Industries (ASI) & Index of Industrial Production (IIP).
+5. **Data Privacy**: DPDP Act 2023 microdata anonymization & $k$-anonymity.
+6. **Python/R Data Automation**: Pandas chunking scripts for fixed-width survey files.
 
-1. **Top Priority Course**: *"UN SNA 2008 & GVA Compilation"* (NSSTA · 18 Hours) — Closes national accounting and input-output skill gaps.
-2. **Technical Mastery**: *"Python for NSSO Microdata & Automation"* (iGOT · 20 Hours) — Covers multi-gigabyte survey unit-level text data processing.
-3. **Governance & Ethics**: *"DPDP Act 2023 & Statistical Disclosure Control"* (iGOT · 8 Hours).
-
-💡 *Click any course in the Courses catalog or start with a Virtual Lab to begin learning!*`;
-  } else {
-    responseText = `### 🏛️ StatSkill AI — Closed-Loop Competency Assistant
-
-Greetings, **${userContext?.name || "Officer"}**! I am your integrated MoSPI & NSSTA capacity building copilot.
-
-I can guide you through the complete **Assess → Gap → Learn → Elevate** cycle:
-- **1. Assess ✍️**: Test your statistical knowledge with diagnostic MCQs.
-- **2. Gap Analysis ⚖️**: Diagnose gaps between your current skill level and cadre targets.
-- **3. Learn 📖**: Discover tailored NSSTA & iGOT training modules with formulas & labs.
-- **4. Elevate ⚡**: Verify competencies and update your official skill audit profile.
-
-What would you like to explore first?`;
+*Type any technical question, formula inquiry, or coding request to begin!*`;
   }
 
   return { text: responseText, source: "mock" };
@@ -680,35 +763,20 @@ Guidelines:
 5. If asked for a real example, ground it in official Indian statistical surveys (PLFS, CPI, ASI, NSSO, Census).
 6. Format responses with clean Markdown. Keep it pedagogically clear, concise, and helpful.`;
 
-      const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: "llama-3.3-70b-versatile",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...conversationHistory.slice(-8).map((m) => ({ role: m.role, content: m.text })),
-          ],
-          temperature: 0.4,
-          max_tokens: 1000,
-        }),
-      });
+      const groqResult = await callGroqChatCompletion(
+        apiKey,
+        [
+          { role: "system", content: systemPrompt },
+          ...conversationHistory.slice(-8).map((m) => ({ role: m.role, content: m.text })),
+        ],
+        { temperature: 0.4, max_tokens: 1000 }
+      );
 
-      if (res.ok) {
-        const data = await res.json();
-        const content = data.choices?.[0]?.message?.content;
-        if (content && content.trim()) {
-          return { text: content.trim(), source: "ai" };
-        }
-      } else {
-        const errText = await res.text();
-        console.warn("[AI Tutor] Falling back to built-in lecture engine: Groq error", errText);
+      if (groqResult && groqResult.text.trim()) {
+        return { text: groqResult.text.trim(), source: "ai" };
       }
     } catch (err: any) {
-      console.warn("[AI Tutor] Falling back to built-in lecture engine: network error", err.message);
+      console.warn("[AI Tutor] Network error calling Groq:", err.message);
     }
   }
 
@@ -969,33 +1037,17 @@ Return ONLY valid JSON matching this exact structure:
 }`;
 
   try {
-    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "llama-3.3-70b-versatile",
-        messages: [{ role: "user", content: prompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.3,
-        max_tokens: 1500,
-      }),
-    });
+    const groqResult = await callGroqChatCompletion(
+      apiKey,
+      [{ role: "user", content: prompt }],
+      { jsonMode: true, temperature: 0.3, max_tokens: 1500 }
+    );
 
-    if (res.ok) {
-      const data = await res.json();
-      const rawContent = data.choices?.[0]?.message?.content;
-      if (rawContent) {
-        const parsed = JSON.parse(rawContent);
-        if (Array.isArray(parsed.slides) && parsed.slides.length === 5) {
-          return { slides: parsed.slides, source: "ai" };
-        }
+    if (groqResult && groqResult.text) {
+      const parsed = JSON.parse(groqResult.text);
+      if (Array.isArray(parsed.slides) && parsed.slides.length === 5) {
+        return { slides: parsed.slides, source: "ai" };
       }
-    } else {
-      const errText = await res.text();
-      console.warn("[AI Service] Falling back to mock data: slide generation API error", errText);
     }
   } catch (e: any) {
     console.warn("[AI Service] Falling back to mock data: slide generation error", e.message);

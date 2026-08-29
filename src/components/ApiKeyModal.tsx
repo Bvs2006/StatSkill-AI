@@ -34,14 +34,14 @@ export function ApiKeyModal({
           Authorization: `Bearer ${groqKey.trim()}`,
         },
         body: JSON.stringify({
-          model: "llama-3.1-8b-instant",
+          model: "openai/gpt-oss-120b",
           messages: [{ role: "user", content: "ping" }],
           max_tokens: 5,
         }),
       });
 
       if (res.ok) {
-        setTestResult({ success: true, msg: "✅ Groq Cloud Connection Successful! (Llama 3.3 Active)" });
+        setTestResult({ success: true, msg: "✅ Groq Cloud Connection Successful! (GPT-OSS 120B / Qwen 3.8 Active)" });
       } else {
         const err = await res.json().catch(() => ({}));
         setTestResult({ success: false, msg: `❌ Authentication Failed: ${err?.error?.message || res.statusText}` });
