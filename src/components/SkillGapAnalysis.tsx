@@ -119,8 +119,17 @@ export function SkillGapAnalysis({ onNav, onOpenCourse }: SkillGapAnalysisProps)
   );
   const [selectedRole, setSelectedRole] = useState<JobRoleDefinition>(() => {
     return (
-      DEFAULT_JOB_ROLES.find((r) => r.id === profile.jobRoleId) ||
-      DEFAULT_JOB_ROLES[0]
+      DEFAULT_JOB_ROLES.find(
+        (r) =>
+          r.id === profile.jobRoleId ||
+          (profile.cadreGrade && r.cadreGrade === profile.cadreGrade) ||
+          (profile.department && r.department.toLowerCase().includes(profile.department.toLowerCase()))
+      ) ||
+      (profile.cadreGrade === "JAG" || profile.cadreGrade === "SAG" || profile.cadreGrade === "HAG"
+        ? DEFAULT_JOB_ROLES[2]
+        : profile.cadreGrade === "SSO" || profile.cadreGrade === "JSO"
+        ? DEFAULT_JOB_ROLES[1]
+        : DEFAULT_JOB_ROLES[0])
     );
   });
   const [viewMode, setViewMode] = useState<"matrix" | "table" | "analytics" | "rubric">("matrix");

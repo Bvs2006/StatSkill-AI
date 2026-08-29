@@ -61,6 +61,8 @@ import {
   issueDigitalCredential,
   verifyCredential,
   registerOfficerAccount,
+  loginOfficerWithCredentials,
+  deriveUserCompetencies,
   getCourseImage,
   type VerifiableCertificate,
 } from "./services/storageService";
@@ -925,7 +927,14 @@ function LoginScreen({
           {/* ────────────── VIEW 1: SIGN IN ────────────── */}
           {authMode === "signin" && (
             <div className="space-y-6">
-              <form onSubmit={(e) => { e.preventDefault(); onLogin(); }} className="space-y-4 text-left">
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  loginOfficerWithCredentials(empId.trim() || "officer@nic.in", "learner");
+                  onLogin();
+                }}
+                className="space-y-4 text-left"
+              >
                 <div>
                   <label className="block text-xs font-bold text-gray-700 mb-1 flex items-center justify-between">
                     <span className="flex items-center gap-1.5">
@@ -1315,39 +1324,61 @@ function LoginScreen({
 
 function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
   const [step, setStep] = useState(1);
-  const [name, setName] = useState("Dr. Rajesh Sharma, ISS");
-  const [empId, setEmpId] = useState("MOSPI-ISS-2019-048");
-  const [dept, setDept] = useState("Labour Statistics");
-  const [desig, setDesig] = useState("Statistical Officer");
-  const [cadre, setCadre] = useState("Indian Statistical Service");
-  const [exp, setExp] = useState(5);
-  const [careerGoal, setCareerGoal] = useState("Lead National Accounts & GVA Compilation");
-  const [prefLang, setPrefLang] = useState<"EN" | "HI" | "TE">("EN");
+  const existingProf = getProfile();
+  const [name, setName] = useState(existingProf.name || "");
+  const [empId, setEmpId] = useState(existingProf.employeeId || `MOSPI-ISS-${Date.now().toString().slice(-4)}`);
+  const [dept, setDept] = useState(existingProf.department || "Labour & Social Statistics Division");
+  const [desig, setDesig] = useState(existingProf.designation || "Statistical Officer");
+  const [cadre, setCadre] = useState(existingProf.cadre || "Indian Statistical Service");
+  const [cadreGrade, setCadreGrade] = useState<"JTS" | "STS" | "JAG" | "SAG" | "HAG" | "JSO" | "SSO" | "Officer">((existingProf.cadreGrade as any) || "STS");
+  const [exp, setExp] = useState(existingProf.yearsOfExperience || 4);
+  const [tools, setTools] = useState<string[]>(["Python", "Excel"]);
+  const [ratings, setRatings] = useState<Record<string, number>>({
+    "Descriptive Statistics & Sampling": 4,
+    "Python for Data Analysis": 2,
+    "National Accounts & GVA": 2,
+    "Labour & Employment (PLFS)": 3,
+    "Data Privacy (DPDP Act)": 2,
+  });
+  const [careerGoal, setCareerGoal] = useState(existingProf.careerGoal || "Lead Official Statistical Operations & Policy Insights");
+  const [prefLang, setPrefLang] = useState<"EN" | "HI" | "TE">(existingProf.preferredLanguage || "EN");
+
+  function toggleTool(t: string) {
+    if (tools.includes(t)) {
+      setTools(tools.filter((x) => x !== t));
+    } else {
+      setTools([...tools, t]);
+    }
+  }
 
   function handleFinish() {
-    const profile = getProfile();
     const updated: OfficerProfile = {
-      ...profile,
-      name,
-      employeeId: empId,
+      ...existingProf,
+      name: name.trim() || "Official Statistical Officer",
+      employeeId: empId.trim() || `MOSPI-${Date.now().toString().slice(-6)}`,
       department: dept,
       designation: desig,
       cadre,
+      cadreGrade,
       yearsOfExperience: exp,
       careerGoal,
       preferredLanguage: prefLang,
       onboardingCompleted: true,
     };
+
+    const comps = deriveUserCompetencies(updated, ratings, tools, dept);
+
     saveProfile(updated);
+    saveUserCompetencies(comps);
     onComplete();
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[#1864A6] via-[#0F4C81] to-[#0B3D66] flex flex-col justify-center items-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-b from-[#1864A6] via-[#0F4C81] to-[#0B3D66] flex flex-col justify-center items-center p-4 relative overflow-hidden font-sans">
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-400/20 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-orange-500/15 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="bg-white rounded-3xl p-7 md:p-9 border border-white/30 shadow-2xl max-w-lg w-full space-y-6 relative z-10 animate-in fade-in zoom-in-95 duration-300">
+      <div className="bg-white rounded-3xl p-7 md:p-9 border border-white/30 shadow-2xl max-w-xl w-full space-y-6 relative z-10 animate-in fade-in zoom-in-95 duration-300">
         <div className="flex justify-between items-center pb-2 border-b border-gray-100">
           <div>
             <span className="text-[10px] font-bold text-[#FF7A00] uppercase tracking-wider">
@@ -1356,7 +1387,7 @@ function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
             <h2 className="text-base font-bold text-[#0B3D66]">
               {step === 1 && "Personal & Institutional Identity"}
               {step === 2 && "Cadre & Professional Assignment"}
-              {step === 3 && "Baseline Competency Levels"}
+              {step === 3 && "Baseline Competencies & Statistical Tools"}
               {step === 4 && "Learning Preferences & Objectives"}
             </h2>
           </div>
@@ -1365,73 +1396,174 @@ function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
 
         {/* Progress Bar */}
         <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
-          <div className="bg-gradient-to-r from-amber-400 to-[#FF7A00] h-full transition-all duration-300 rounded-full" style={{ width: `${(step / 4) * 100}%` }} />
+          <div
+            className="bg-gradient-to-r from-amber-400 to-[#FF7A00] h-full transition-all duration-300 rounded-full"
+            style={{ width: `${(step / 4) * 100}%` }}
+          />
         </div>
 
         {/* Step 1: Personal */}
         {step === 1 && (
-          <div className="space-y-3.5 text-xs">
+          <div className="space-y-3.5 text-xs text-left">
             <div>
-              <label className="font-bold text-gray-700 block mb-1">Full Name &amp; Title</label>
-              <input type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]" />
+              <label className="font-bold text-gray-700 block mb-1">Full Name &amp; Official Title *</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Dr. Ananya Sen, ISS"
+                className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]"
+              />
             </div>
             <div>
               <label className="font-bold text-gray-700 block mb-1">Official Employee ID</label>
-              <input type="text" value={empId} onChange={(e) => setEmpId(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]" />
+              <input
+                type="text"
+                value={empId}
+                onChange={(e) => setEmpId(e.target.value)}
+                placeholder="e.g. MOSPI-ISS-2023-019"
+                className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]"
+              />
             </div>
             <div>
               <label className="font-bold text-gray-700 block mb-1">Department / Division</label>
-              <input type="text" value={dept} onChange={(e) => setDept(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]" />
+              <input
+                type="text"
+                value={dept}
+                onChange={(e) => setDept(e.target.value)}
+                placeholder="e.g. National Accounts Division / FOD"
+                className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]"
+              />
             </div>
           </div>
         )}
 
         {/* Step 2: Professional */}
         {step === 2 && (
-          <div className="space-y-3.5 text-xs">
+          <div className="space-y-3.5 text-xs text-left">
             <div>
               <label className="font-bold text-gray-700 block mb-1">Cadre Affiliation</label>
-              <select value={cadre} onChange={(e) => setCadre(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-xl bg-white focus:border-[#0B3D66]">
+              <select
+                value={cadre}
+                onChange={(e) => setCadre(e.target.value)}
+                className="w-full p-2.5 border border-gray-200 rounded-xl bg-white focus:border-[#0B3D66]"
+              >
                 <option value="Indian Statistical Service">Indian Statistical Service (ISS)</option>
                 <option value="Subordinate Statistical Service">Subordinate Statistical Service (SSS)</option>
                 <option value="State DES">State Directorate of Economics &amp; Statistics</option>
               </select>
             </div>
-            <div>
-              <label className="font-bold text-gray-700 block mb-1">Designation</label>
-              <input type="text" value={desig} onChange={(e) => setDesig(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="font-bold text-gray-700 block mb-1">Cadre Grade</label>
+                <select
+                  value={cadreGrade}
+                  onChange={(e) => setCadreGrade(e.target.value as any)}
+                  className="w-full p-2.5 border border-gray-200 rounded-xl bg-white focus:border-[#0B3D66]"
+                >
+                  <option value="JTS">JTS</option>
+                  <option value="STS">STS</option>
+                  <option value="JAG">JAG</option>
+                  <option value="SAG">SAG</option>
+                  <option value="SSO">SSO</option>
+                  <option value="JSO">JSO</option>
+                </select>
+              </div>
+              <div>
+                <label className="font-bold text-gray-700 block mb-1">Designation</label>
+                <input
+                  type="text"
+                  value={desig}
+                  onChange={(e) => setDesig(e.target.value)}
+                  className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]"
+                />
+              </div>
             </div>
             <div>
               <label className="font-bold text-gray-700 block mb-1">Years of Service / Experience</label>
-              <input type="number" value={exp} onChange={(e) => setExp(Number(e.target.value))} className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]" />
+              <input
+                type="number"
+                value={exp}
+                onChange={(e) => setExp(Number(e.target.value))}
+                className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]"
+              />
             </div>
           </div>
         )}
 
         {/* Step 3: Skills selection */}
         {step === 3 && (
-          <div className="space-y-3 text-xs">
-            <p className="text-gray-500">Your initial baseline skills will be pre-loaded into your competency profile for closed-loop gap diagnosis.</p>
-            <div className="p-3.5 bg-blue-50/70 border border-blue-100 rounded-2xl space-y-2">
-              <div className="flex justify-between font-bold text-[#0B3D66]">
-                <span>Descriptive Statistics &amp; Indices</span>
-                <span className="text-xs text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">Level 5/5 (Expert)</span>
+          <div className="space-y-3.5 text-xs text-left">
+            <div>
+              <label className="font-bold text-gray-700 block mb-1.5">
+                Data Tools You Use (Click to Select)
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {["Python", "R", "SQL", "QGIS", "Excel", "SPSS / STATA"].map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    onClick={() => toggleTool(t)}
+                    className={`px-3 py-1.5 rounded-xl font-bold border transition-all cursor-pointer text-[11px] ${
+                      tools.includes(t)
+                        ? "bg-[#0B3D66] text-white border-[#0B3D66] shadow-xs"
+                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
+                  >
+                    {tools.includes(t) ? `✓ ${t}` : `+ ${t}`}
+                  </button>
+                ))}
               </div>
-              <div className="flex justify-between font-bold text-[#0B3D66]">
-                <span>Python for Data Analysis &amp; Microdata</span>
-                <span className="text-xs text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">Level 2/5 (Basic)</span>
+            </div>
+
+            <div className="p-3.5 bg-gray-50 rounded-2xl border border-gray-200 space-y-2.5">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-800 text-[11px] uppercase">
+                  Rate Your Current Baseline (1–5)
+                </span>
+                <span className="text-[10px] text-gray-400">Used for Gap Diagnosis</span>
               </div>
-              <div className="flex justify-between font-bold text-[#0B3D66]">
-                <span>National Accounts &amp; GVA Compilation</span>
-                <span className="text-xs text-blue-700 bg-blue-100 px-2 py-0.5 rounded-full">Level 2/5 (Basic)</span>
-              </div>
+
+              {[
+                { key: "Descriptive Statistics & Sampling", label: "Descriptive Statistics & Sampling" },
+                { key: "Python for Data Analysis", label: "Python Data Processing" },
+                { key: "National Accounts & GVA", label: "National Accounts & GVA" },
+                { key: "Labour & Employment (PLFS)", label: "Labour & Survey Methodology" },
+                { key: "Data Privacy (DPDP Act)", label: "Data Privacy (DPDP Act 2023)" },
+              ].map((skill) => (
+                <div
+                  key={skill.key}
+                  className="flex items-center justify-between gap-2 pt-1.5 border-t border-gray-200/60 first:border-t-0 first:pt-0"
+                >
+                  <span className="font-medium text-gray-700 text-[11px] truncate max-w-[200px]">
+                    {skill.label}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((lvl) => (
+                      <button
+                        key={lvl}
+                        type="button"
+                        onClick={() => setRatings({ ...ratings, [skill.key]: lvl })}
+                        className={`w-6 h-6 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                          (ratings[skill.key] || 1) >= lvl
+                            ? "bg-[#FF7A00] text-white shadow-2xs"
+                            : "bg-gray-200 text-gray-500 hover:bg-gray-300"
+                        }`}
+                      >
+                        {lvl}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
         {/* Step 4: Preferences */}
         {step === 4 && (
-          <div className="space-y-3.5 text-xs">
+          <div className="space-y-3.5 text-xs text-left">
             <div>
               <label className="font-bold text-gray-700 block mb-1.5">Preferred Instruction Language</label>
               <div className="flex gap-2">
@@ -1440,7 +1572,11 @@ function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
                     key={l}
                     type="button"
                     onClick={() => setPrefLang(l)}
-                    className={`flex-1 py-2.5 rounded-xl font-bold border transition-all cursor-pointer ${prefLang === l ? "bg-[#0B3D66] text-white border-[#0B3D66] shadow-xs" : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"}`}
+                    className={`flex-1 py-2.5 rounded-xl font-bold border transition-all cursor-pointer ${
+                      prefLang === l
+                        ? "bg-[#0B3D66] text-white border-[#0B3D66] shadow-xs"
+                        : "bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100"
+                    }`}
                   >
                     {l === "EN" ? "English" : l === "HI" ? "हिन्दी" : "తెలుగు"}
                   </button>
@@ -1449,21 +1585,37 @@ function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
             </div>
             <div>
               <label className="font-bold text-gray-700 block mb-1">Primary Career / Training Goal</label>
-              <input type="text" value={careerGoal} onChange={(e) => setCareerGoal(e.target.value)} className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]" />
+              <input
+                type="text"
+                value={careerGoal}
+                onChange={(e) => setCareerGoal(e.target.value)}
+                className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50/50 focus:bg-white focus:border-[#0B3D66]"
+              />
             </div>
           </div>
         )}
 
         <div className="flex justify-between items-center pt-4 border-t border-gray-100">
           {step > 1 ? (
-            <button onClick={() => setStep(step - 1)} className="text-xs font-bold text-gray-500 hover:text-gray-800 cursor-pointer">
+            <button
+              onClick={() => setStep(step - 1)}
+              className="text-xs font-bold text-gray-500 hover:text-gray-800 cursor-pointer"
+            >
               ← Back
             </button>
-          ) : <div />}
+          ) : (
+            <div />
+          )}
 
           {step < 4 ? (
             <button
-              onClick={() => setStep(step + 1)}
+              onClick={() => {
+                if (step === 1 && !name.trim()) {
+                  alert("Please enter your name.");
+                  return;
+                }
+                setStep(step + 1);
+              }}
               className="px-5 py-2.5 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
             >
               Continue →
@@ -1473,7 +1625,7 @@ function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
               onClick={handleFinish}
               className="px-6 py-2.5 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer"
             >
-              Take Competency Assessment →
+              Finish &amp; Calibrate Competencies →
             </button>
           )}
         </div>
@@ -3959,17 +4111,48 @@ export default function App() {
   }
 
   function handleDemoLogin(role: UserRole) {
-    const prof = getProfile();
-    const updated = {
-      ...prof,
+    const defaultEmail =
+      role === "trainer"
+        ? "arvind.rao@nssta.gov.in"
+        : role === "admin"
+        ? "sunita.verma@mospi.gov.in"
+        : "rajesh.sharma@nic.in";
+
+    const defaultName =
+      role === "trainer"
+        ? "Prof. Arvind Rao (NSSTA Faculty)"
+        : role === "admin"
+        ? "Smt. Sunita Verma (Director, Capacity Development)"
+        : "Dr. Rajesh Sharma, ISS";
+
+    const defaultDept =
+      role === "trainer"
+        ? "National Statistical Systems Training Academy (NSSTA)"
+        : role === "admin"
+        ? "MoSPI Capacity Development & Admin Division"
+        : "Labour & Social Statistics Division";
+
+    const updatedProfile: OfficerProfile = {
+      ...getProfile(),
+      employeeId: role === "trainer" ? "NSSTA-FAC-012" : role === "admin" ? "MOSPI-DIR-003" : "MOSPI-ISS-2019-048",
+      name: defaultName,
+      email: defaultEmail,
       role,
       isAdmin: role === "admin",
       isTrainer: role === "trainer",
-      name: role === "trainer" ? "Dr. Arvind Rao (NSSTA Faculty)" : role === "admin" ? "Smt. Sunita Verma (Joint Secretary)" : "Dr. Rajesh Sharma, ISS",
+      department: defaultDept,
+      designation: role === "trainer" ? "Senior Training Director" : role === "admin" ? "Joint Director" : "Statistical Officer",
+      cadreGrade: role === "trainer" || role === "admin" ? "JAG" : "STS",
       onboardingCompleted: true,
+      learningHours: 42,
+      coursesCompleted: 3,
     };
-    saveProfile(updated);
+
+    const comps = deriveUserCompetencies(updatedProfile);
+    saveProfile(updatedProfile);
+    saveUserCompetencies(comps);
     setActiveRole(role);
+
     if (role === "trainer") setScreen("trainer");
     else if (role === "admin") setScreen("admin");
     else setScreen("dashboard");

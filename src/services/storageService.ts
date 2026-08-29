@@ -168,35 +168,87 @@ export const DEMO_STATISTICAL_OFFICER: OfficerProfile = {
 };
 
 // ──────────────────────────────────────────────
-// 4. Initial User Competency Scores
+// 4. Dynamic User Competency & Skill Gap Derivation Engine
 // ──────────────────────────────────────────────
-export function getInitialUserCompetencies(): UserCompetencyScore[] {
-  const currentLevelsMap: Record<string, number> = {
-    "Descriptive Statistics & Sampling": 5, // Statistics = 5/5
-    "Python for Data Analysis": 2,          // Python = 2/4 (Gap: 2, High Priority)
-    "SQL & Database Querying": 3,           // SQL = 3/4 (Gap: 1, Medium Priority)
-    "GIS & Geospatial Mapping": 1,          // GIS = 1/3 (Gap: 2, High Priority)
-    "Artificial Intelligence & ML": 1,      // AI/ML = 1/3 (Gap: 2, High Priority)
-    "Data Visualization & Storytelling": 3, // Data Viz = 3/4 (Gap: 1, Medium Priority)
-    "Survey Design & Methodology": 4,       // Survey Design = 4/4 (Gap: 0)
-    "Labour & Employment (PLFS)": 4,        // PLFS = 4/4 (Gap: 0)
-    "Data Privacy (DPDP Act)": 2,           // DPDP = 2/3 (Gap: 1)
-    "National Accounts & GVA": 3,
-    "Price Statistics (CPI / WPI)": 3,
-    "R Statistical Computing": 2,
-    "Cloud Infrastructure & APIs": 2,
-    "Cybersecurity Protocols": 3,
-    "Digital Public Infrastructure": 3,
-    "Team Leadership & Governance": 4,
-    "Ethics in Official Statistics": 5,
-    "Public Policy Decision Making": 4,
-    "SDG Indicators & Metadata": 3,
-  };
 
-  const jobRole = DEFAULT_JOB_ROLES[0];
+export function deriveUserCompetencies(
+  profile: OfficerProfile,
+  baselineRatings?: Record<string, number>,
+  toolsUsed?: string[],
+  primaryDomain?: string
+): UserCompetencyScore[] {
+  // Find matching job role for this profile's grade/cadre/department
+  let jobRole = DEFAULT_JOB_ROLES.find(
+    (r) =>
+      r.id === profile.jobRoleId ||
+      (profile.cadreGrade && r.cadreGrade === profile.cadreGrade) ||
+      (profile.department && r.department.toLowerCase().includes(profile.department.toLowerCase()))
+  );
+  if (!jobRole) {
+    if (profile.cadreGrade === "JAG" || profile.cadreGrade === "SAG" || profile.cadreGrade === "HAG") {
+      jobRole = DEFAULT_JOB_ROLES[2]; // Senior Statistical Officer (JAG)
+    } else if (profile.cadreGrade === "SSO" || profile.cadreGrade === "JSO") {
+      jobRole = DEFAULT_JOB_ROLES[1]; // Data Analyst / SSO
+    } else {
+      jobRole = DEFAULT_JOB_ROLES[0]; // Statistical Officer (STS)
+    }
+  }
+
+  const exp = profile.yearsOfExperience || 2;
+  const tools = toolsUsed || [];
+  const domain = (primaryDomain || profile.currentAssignment || profile.department || "").toLowerCase();
 
   return DEFAULT_COMPETENCIES_CATALOGUE.map((def) => {
-    const current = currentLevelsMap[def.name] ?? 2;
+    let current = 2; // Default baseline
+
+    // 1. Explicit user baseline rating provided on registration/onboarding
+    if (baselineRatings && baselineRatings[def.name] !== undefined) {
+      current = baselineRatings[def.name];
+    }
+    // 2. Data tools selected by user
+    else if (def.name.includes("Python") && (tools.includes("Python") || tools.some((t) => t.toLowerCase().includes("python")))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("R ") && (tools.includes("R") || tools.some((t) => t.toLowerCase() === "r"))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("SQL") && (tools.includes("SQL") || tools.some((t) => t.toLowerCase().includes("sql")))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("GIS") && (tools.includes("GIS") || tools.includes("QGIS") || tools.some((t) => t.toLowerCase().includes("gis")))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("Data Visualization") && (tools.includes("Excel") || tools.includes("Python") || tools.includes("R"))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 3 ? 3 : 2)));
+    }
+    // 3. Domain & Department expertise matching from user profile
+    else if (def.name.includes("National Accounts") && (domain.includes("national accounts") || domain.includes("nad") || domain.includes("gva"))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("Labour") && (domain.includes("labour") || domain.includes("plfs") || domain.includes("fod"))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("Price Statistics") && (domain.includes("price") || domain.includes("cpi") || domain.includes("wpi") || domain.includes("psd"))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("Survey Design") && (domain.includes("survey") || domain.includes("sampling") || domain.includes("sdrd") || domain.includes("fod"))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    } else if (def.name.includes("SDG") && (domain.includes("sdg") || domain.includes("social") || domain.includes("ssd"))) {
+      current = Math.min(5, Math.max(3, Math.round(exp >= 4 ? 4 : 3)));
+    }
+    // 4. Experience-based general statistical foundations
+    else if (def.name.includes("Descriptive Statistics") || def.name.includes("Sampling Theory")) {
+      if (profile.cadre.includes("Indian Statistical Service")) {
+        current = Math.min(5, Math.max(3, Math.round(exp >= 5 ? 5 : exp >= 3 ? 4 : 3)));
+      } else {
+        current = Math.min(5, Math.max(2, Math.round(exp >= 4 ? 3 : 2)));
+      }
+    } else if (def.domain === "Behavioural") {
+      if (def.name.includes("Ethics")) {
+        current = Math.min(5, Math.max(4, Math.round(exp >= 3 ? 5 : 4)));
+      } else {
+        current = Math.min(5, Math.max(2, Math.round(exp >= 5 ? 4 : exp >= 2 ? 3 : 2)));
+      }
+    } else if (def.domain === "Digital Governance") {
+      current = Math.min(4, Math.max(2, Math.round(exp >= 4 ? 3 : 2)));
+    } else {
+      // Technical emerging (AI/ML, Cloud APIs, etc.)
+      current = 1;
+    }
+
     const required = jobRole.requiredCompetencies[def.name] ?? 3;
     const gap = Math.max(0, required - current);
 
@@ -230,10 +282,15 @@ export function getInitialUserCompetencies(): UserCompetencyScore[] {
       priorityScore,
       priorityLevel,
       confidenceScore: 0.88,
-      evidenceSource: "Baseline Cadre Competency Evaluation",
-      lastAssessedDate: "2026-05-15",
+      evidenceSource: `Officer Baseline Evaluation (${profile.name || "Self-Assessment"})`,
+      lastAssessedDate: new Date().toISOString().slice(0, 10),
     };
   });
+}
+
+export function getInitialUserCompetencies(customProfile?: OfficerProfile): UserCompetencyScore[] {
+  const profile = customProfile || (typeof window !== "undefined" ? getProfile() : DEMO_STATISTICAL_OFFICER);
+  return deriveUserCompetencies(profile);
 }
 
 // ──────────────────────────────────────────────
@@ -772,15 +829,16 @@ export function getProfile(): OfficerProfile {
         return {
           ...DEMO_STATISTICAL_OFFICER,
           ...parsed,
-          name: parsed.name || DEMO_STATISTICAL_OFFICER.name,
-          role: parsed.role || "learner",
-          cadre: parsed.cadre || DEMO_STATISTICAL_OFFICER.cadre,
-          cadreGrade: parsed.cadreGrade || DEMO_STATISTICAL_OFFICER.cadreGrade,
-          department: parsed.department || DEMO_STATISTICAL_OFFICER.department,
-          designation: parsed.designation || DEMO_STATISTICAL_OFFICER.designation,
-          posting: parsed.posting || DEMO_STATISTICAL_OFFICER.posting,
-          coursesCompleted: typeof parsed.coursesCompleted === "number" ? parsed.coursesCompleted : 3,
-          learningHours: typeof parsed.learningHours === "number" ? parsed.learningHours : 42,
+          name: parsed.name ?? DEMO_STATISTICAL_OFFICER.name,
+          role: parsed.role ?? "learner",
+          cadre: parsed.cadre ?? DEMO_STATISTICAL_OFFICER.cadre,
+          cadreGrade: parsed.cadreGrade ?? DEMO_STATISTICAL_OFFICER.cadreGrade,
+          department: parsed.department ?? DEMO_STATISTICAL_OFFICER.department,
+          designation: parsed.designation ?? DEMO_STATISTICAL_OFFICER.designation,
+          posting: parsed.posting ?? DEMO_STATISTICAL_OFFICER.posting,
+          coursesCompleted: typeof parsed.coursesCompleted === "number" ? parsed.coursesCompleted : 0,
+          learningHours: typeof parsed.learningHours === "number" ? parsed.learningHours : 0,
+          certificationsCount: typeof parsed.certificationsCount === "number" ? parsed.certificationsCount : 0,
         };
       }
     } catch {}
@@ -1290,41 +1348,83 @@ export function registerOfficerAccount(data: RegisterOfficerInput): {
     onboardingCompleted: true,
   };
 
-  // Map baseline ratings to competencies for immediate skill gap calculations
-  const initialComps = getInitialUserCompetencies();
-  const updatedComps = initialComps.map((comp) => {
-    let current = comp.currentLevel;
-    if (data.baselineRatings[comp.competencyName] !== undefined) {
-      current = data.baselineRatings[comp.competencyName];
-    } else if (comp.competencyName.includes("Python") && data.toolsUsed.includes("Python")) {
-      current = Math.max(current, 3);
-    } else if (comp.competencyName.includes("R ") && data.toolsUsed.includes("R")) {
-      current = Math.max(current, 3);
-    } else if (comp.competencyName.includes("SQL") && data.toolsUsed.includes("SQL")) {
-      current = Math.max(current, 3);
-    } else if (comp.competencyName.includes("GIS") && data.toolsUsed.includes("GIS")) {
-      current = Math.max(current, 3);
-    }
-
-    const gap = Math.max(0, comp.requiredLevel - current);
-    const priorityScore = Math.min(100, Math.round(gap * 25 + (comp.requiredLevel * 5)));
-    const priorityLevel: "High" | "Medium" | "Low" | "None" =
-      gap >= 2 ? "High" : gap === 1 ? "Medium" : "None";
-
-    return {
-      ...comp,
-      currentLevel: current,
-      gap,
-      priorityScore,
-      priorityLevel,
-      evidenceSource: "Officer Baseline Self-Assessment & Registration",
-      lastAssessedDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
-    };
-  });
+  const updatedComps = deriveUserCompetencies(
+    profile,
+    data.baselineRatings,
+    data.toolsUsed,
+    data.primaryDomain
+  );
 
   saveProfile(profile);
   saveUserCompetencies(updatedComps);
   setActiveRole(profile.role);
 
   return { profile, competencies: updatedComps };
+}
+
+export function loginOfficerWithCredentials(
+  emailOrId: string,
+  role: UserRole = "learner"
+): { profile: OfficerProfile; competencies: UserCompetencyScore[] } {
+  const cleanInput = emailOrId.trim();
+  const isEmail = cleanInput.includes("@");
+
+  let derivedName = cleanInput;
+  if (isEmail) {
+    const handle = cleanInput.split("@")[0];
+    const parts = handle.split(/[._-]/).filter(Boolean);
+    if (parts.length > 0) {
+      derivedName = parts
+        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(" ");
+    }
+  }
+
+  // Check if existing profile in localStorage matches this email/id
+  const existing = getProfile();
+  if (
+    existing.email.toLowerCase() === cleanInput.toLowerCase() ||
+    existing.employeeId === cleanInput
+  ) {
+    const userComps = getUserCompetencies();
+    return { profile: existing, competencies: userComps };
+  }
+
+  const isNic = cleanInput.includes("@nic.in") || cleanInput.includes("@gov.in");
+
+  const newProfile: OfficerProfile = {
+    employeeId: isEmail ? `MOSPI-${cleanInput.slice(0, 3).toUpperCase()}-${Date.now().toString().slice(-4)}` : cleanInput,
+    name: derivedName.startsWith("Dr.") || derivedName.startsWith("Shri") || derivedName.startsWith("Smt.") ? derivedName : `Dr. ${derivedName}, ISS`,
+    email: isEmail ? cleanInput : `${cleanInput.toLowerCase()}@nic.in`,
+    phone: "+91 98104 XXXXX",
+    role: role,
+    isAdmin: role === "admin",
+    isTrainer: role === "trainer",
+    department: "Labour & Social Statistics Division",
+    designation: "Statistical Officer",
+    jobRoleId: "role-stat-officer",
+    jobRoleTitle: "Statistical Officer",
+    cadre: "Indian Statistical Service",
+    cadreGrade: "STS",
+    posting: "Sardar Patel Bhawan, New Delhi",
+    currentAssignment: "Statistical Indicator Compilation & Policy Analysis",
+    educationalQualification: "M.Sc. Statistics / Economics",
+    yearsOfExperience: 4,
+    previousTraining: ["NSSTA Induction", "iGOT Data Analysis"],
+    careerGoal: "Elevate to Senior Statistical Officer & National Accounts Lead",
+    preferredLearningMode: "Blended Academy",
+    preferredLanguage: "EN",
+    learningHours: 0,
+    coursesCompleted: 0,
+    certificationsCount: 0,
+    onboardingCompleted: true,
+  };
+
+  const comps = deriveUserCompetencies(newProfile);
+
+  saveProfile(newProfile);
+  saveUserCompetencies(comps);
+  setActiveRole(role);
+
+  return { profile: newProfile, competencies: comps };
 }
