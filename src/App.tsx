@@ -78,7 +78,6 @@ import {
 } from "./services/aiService";
 
 import { semanticSearchCourses } from "./services/sentenceTransformer";
-import { ApiKeyModal } from "./components/ApiKeyModal";
 import { extractTextFromFile } from "./services/documentParser";
 import { LiveTerminalModal, OFFICIAL_LAB_EXERCISES, type LabExercise } from "./components/LiveTerminal";
 import { LecturePlayer } from "./components/LecturePlayer";
@@ -537,11 +536,6 @@ function Topbar({
       <IgotAdapterModal
         isOpen={igotModalOpen}
         onClose={() => setIgotModalOpen(false)}
-      />
-
-      <ApiKeyModal
-        isOpen={apiKeyModalOpen}
-        onClose={() => setApiKeyModalOpen(false)}
       />
     </header>
   );
@@ -2733,8 +2727,6 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
   const [loading, setLoading] = useState(false);
   const [elevateNotice, setElevateNotice] = useState<string | null>(null);
   const [activeStage, setActiveStage] = useState<"assess" | "gap" | "learn" | "elevate">("assess");
-  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
-
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -3082,11 +3074,6 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
           </div>
         </div>
       </div>
-
-      <ApiKeyModal
-        isOpen={apiKeyModalOpen}
-        onClose={() => setApiKeyModalOpen(false)}
-      />
     </div>
   );
 }
