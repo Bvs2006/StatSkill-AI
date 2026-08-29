@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     SUPABASE_URL: str = "https://zmlbijflvrukttlrfhlo.supabase.co"
     SUPABASE_ANON_KEY: str = ""
     SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_JWT_SECRET: str = ""
 
     # Groq AI Provider
     GROQ_API_KEY: str = "gsk_mock_or_user_key"

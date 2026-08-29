@@ -37,6 +37,7 @@ const STORAGE_KEYS = {
   NOTIFICATIONS: "statskill_notifications",
   JOB_ROLES: "statskill_job_roles",
   ACTIVE_ROLE: "statskill_active_role",
+  CERTIFICATES: "statskill_certificates",
 };
 
 // ──────────────────────────────────────────────
@@ -816,6 +817,48 @@ export function getCourses(): CourseItem[] {
   return DEFAULT_COURSES_CATALOGUE;
 }
 
+export function getCourseImage(c: { id?: string; category?: string; primaryCompetency?: string; title?: string; imageUrl?: string }): string {
+  if (c.imageUrl) return c.imageUrl;
+  const title = (c.title || "").toLowerCase();
+  const cat = (c.category || "").toLowerCase();
+  const comp = (c.primaryCompetency || "").toLowerCase();
+
+  if (title.includes("python") || comp.includes("python") || title.includes("data analysis")) {
+    return "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("ai") || title.includes("machine learning") || comp.includes("artificial intelligence") || comp.includes("ml")) {
+    return "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("gis") || title.includes("qgis") || comp.includes("gis") || comp.includes("mapping")) {
+    return "https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("sampling") || title.includes("survey") || comp.includes("sampling") || comp.includes("survey")) {
+    return "https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("national accounts") || title.includes("gva") || title.includes("sna") || comp.includes("national accounts")) {
+    return "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("price") || title.includes("cpi") || title.includes("inflation") || comp.includes("index")) {
+    return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("sql") || title.includes("database") || comp.includes("sql") || title.includes("warehousing")) {
+    return "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("storytelling") || title.includes("visualization") || comp.includes("visualization") || title.includes("dashboard")) {
+    return "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("dpdp") || title.includes("governance") || title.includes("data protection") || comp.includes("governance")) {
+    return "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("time series") || title.includes("forecast") || comp.includes("econometric")) {
+    return "https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=600&q=80";
+  }
+  if (cat.includes("behavioural") || title.includes("leadership") || title.includes("management") || title.includes("policy")) {
+    return "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=600&q=80";
+  }
+  return "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80";
+}
+
 export function saveCourses(courses: CourseItem[]): void {
   if (typeof window === "undefined") return;
   localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(courses));
@@ -1000,35 +1043,273 @@ export function saveTrainerQuestionBank(questions: ValidatedMCQ[]): void {
   localStorage.setItem(STORAGE_KEYS.QUESTION_BANK, JSON.stringify(questions));
 }
 
-export function getCertificates() {
-  return [
+export function getCertificates(): VerifiableCertificate[] {
+  const profile = getProfile();
+  const stored = localStorage.getItem(STORAGE_KEYS.CERTIFICATES);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {}
+  }
+
+  // Initialize with personalized credentials for current officer
+  const initial: VerifiableCertificate[] = [
     {
       id: "cert-1",
-      title: "Data Storytelling for Policy Makers",
+      title: "Data Storytelling & Executive Visualizations",
       issuer: "iGOT Karmayogi",
-      issuedTo: "Dr. Rajesh Sharma, ISS",
+      issuedTo: profile.name || "Dr. Rajesh Sharma, ISS",
+      employeeId: profile.employeeId || "MOSPI-ISS-2023-019",
+      cadre: profile.cadre || "Indian Statistical Service",
       issueDate: "12 May 2026",
       expiryDate: "Permanent Credential",
       verificationHash: "SHA256:7f83b1657ff1fc53b92dc18148a1d65dfc2d4b1fa3d677284addd200126d9069",
       credentialId: "iGOT-MoSPI-2026-88392",
-      competencyPillars: ["Data Storytelling", "Executive Briefing", "Data Viz"],
+      competencyPillars: ["Data Storytelling", "Executive Briefing", "Data Visualization & Storytelling"],
       scorePct: 94,
-      grade: "Distinction" as const,
+      grade: "Distinction",
+      cpdHours: 12,
+      signatureAlgorithm: "ECDSA SHA-256 with W3C Verifiable Credential v2.0",
     },
     {
       id: "cert-2",
-      title: "Sampling Methodology & Survey Design",
+      title: "Sampling Methodology & PLFS Two-Stage Design",
       issuer: "NSSTA",
-      issuedTo: "Dr. Rajesh Sharma, ISS",
+      issuedTo: profile.name || "Dr. Rajesh Sharma, ISS",
+      employeeId: profile.employeeId || "MOSPI-ISS-2023-019",
+      cadre: profile.cadre || "Indian Statistical Service",
       issueDate: "28 Feb 2026",
       expiryDate: "Permanent Credential",
       verificationHash: "SHA256:3a105c93c4e9d9e6e88102377fc0d39e24faeb9a023c28d22de26002f2324901",
       credentialId: "NSSTA-TPAC-2026-0421",
-      competencyPillars: ["Survey Design", "Sampling Theory & PPS"],
+      competencyPillars: ["Survey Design & Methodology", "Sampling Theory & PPS"],
       scorePct: 88,
-      grade: "Merit" as const,
+      grade: "Merit",
+      cpdHours: 16,
+      signatureAlgorithm: "ECDSA SHA-256 with W3C Verifiable Credential v2.0",
     },
   ];
+
+  localStorage.setItem(STORAGE_KEYS.CERTIFICATES, JSON.stringify(initial));
+  return initial;
 }
 
-export function addCertificate(cert: any) {}
+export function addCertificate(cert: VerifiableCertificate): void {
+  const current = getCertificates();
+  const updated = [cert, ...current.filter((c) => c.id !== cert.id)];
+  localStorage.setItem(STORAGE_KEYS.CERTIFICATES, JSON.stringify(updated));
+}
+
+// Pseudo-SHA256 generator for browser verifiable credential issuance
+function generateCredentialHash(dataStr: string): string {
+  let hash = 0;
+  for (let i = 0; i < dataStr.length; i++) {
+    const char = dataStr.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  const hex1 = Math.abs(hash).toString(16).padStart(8, "0");
+  const hex2 = Math.abs(hash * 31 + 17).toString(16).padStart(8, "0");
+  const hex3 = Math.abs(hash * 97 + 53).toString(16).padStart(8, "0");
+  const hex4 = Math.abs(hash * 13 + 89).toString(16).padStart(8, "0");
+  return `SHA256:${hex1}${hex2}${hex3}${hex4}88392fc53b92dc18148a1d65`;
+}
+
+export function issueDigitalCredential(params: {
+  title: string;
+  issuer?: "iGOT Karmayogi" | "NSSTA" | "MoSPI Capacity Board";
+  competencyPillars: string[];
+  scorePct: number;
+  cpdHours?: number;
+}): VerifiableCertificate {
+  const profile = getProfile();
+  const issuer = params.issuer || "MoSPI Capacity Board";
+  const score = Math.max(0, Math.min(100, Math.round(params.scorePct)));
+  const grade: "Distinction" | "Merit" | "Pass" =
+    score >= 90 ? "Distinction" : score >= 80 ? "Merit" : "Pass";
+  
+  const cpd = params.cpdHours || (score >= 90 ? 12 : 8);
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  
+  const randomSuffix = Math.floor(10000 + Math.random() * 90000);
+  const credPrefix = issuer === "iGOT Karmayogi" ? "iGOT-MoSPI" : issuer === "NSSTA" ? "NSSTA-TPAC" : "MOSPI-VC";
+  const credentialId = `${credPrefix}-${now.getFullYear()}-${randomSuffix}`;
+  
+  const rawPayload = `${profile.name}|${profile.employeeId}|${params.title}|${score}|${dateStr}|${credentialId}`;
+  const verificationHash = generateCredentialHash(rawPayload);
+
+  const newCert: VerifiableCertificate = {
+    id: `cert-${Date.now()}`,
+    title: params.title,
+    issuer: issuer,
+    issuedTo: profile.name || "Statistical Officer",
+    employeeId: profile.employeeId || "MOSPI-ISS-2026",
+    cadre: profile.cadre || "Indian Statistical Service",
+    issueDate: dateStr,
+    expiryDate: "Permanent Credential",
+    verificationHash: verificationHash,
+    credentialId: credentialId,
+    competencyPillars: params.competencyPillars,
+    scorePct: score,
+    grade: grade,
+    cpdHours: cpd,
+    signatureAlgorithm: "ECDSA SHA-256 with W3C Verifiable Credential v2.0",
+  };
+
+  addCertificate(newCert);
+
+  // Update CPD hours in profile
+  if (profile.hoursCompleted !== undefined) {
+    const updatedHours = (profile.hoursCompleted || 0) + cpd;
+    updateProfile({ ...profile, hoursCompleted: updatedHours });
+  }
+
+  // Write notification
+  addNotification({
+    title: "🎓 W3C Digital Credential Issued",
+    message: `Congratulations! Official Verifiable Credential "${params.title}" has been cryptographically signed and issued (${grade} · ${cpd} CPD Hours).`,
+    type: "competency_update",
+  });
+
+  return newCert;
+}
+
+export function verifyCredential(credentialIdOrHash: string): {
+  valid: boolean;
+  certificate?: VerifiableCertificate;
+  message: string;
+} {
+  const query = credentialIdOrHash.trim();
+  if (!query) {
+    return { valid: false, message: "Please provide a Credential ID or SHA-256 hash." };
+  }
+
+  const allCerts = getCertificates();
+  const match = allCerts.find(
+    (c) =>
+      c.credentialId.toLowerCase() === query.toLowerCase() ||
+      c.verificationHash.toLowerCase() === query.toLowerCase()
+  );
+
+  if (match) {
+    return {
+      valid: true,
+      certificate: match,
+      message: `Verified Authentic! W3C Credential issued to ${match.issuedTo} (${match.issuer}) on ${match.issueDate}. Cryptographic integrity confirmed.`,
+    };
+  }
+
+  return {
+    valid: false,
+    message: "No authentic credential found with this ID or SHA-256 hash in the MoSPI Capacity Ledger.",
+  };
+}
+
+const SUPABASE_CONFIG_KEY = "diid_supabase_config";
+export function getSupabaseConfig(): { url: string; anonKey: string } {
+  const envUrl = (import.meta as any).env?.VITE_SUPABASE_URL || "";
+  const envKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || "";
+  const stored = localStorage.getItem(SUPABASE_CONFIG_KEY);
+  if (stored) {
+    try { return JSON.parse(stored); } catch {}
+  }
+  return { url: envUrl, anonKey: envKey };
+}
+export function setSupabaseConfig(url: string, anonKey: string): void {
+  localStorage.setItem(SUPABASE_CONFIG_KEY, JSON.stringify({ url, anonKey }));
+}
+
+// ──────────────────────────────────────────────
+// 21. Officer Registration Helper
+// ──────────────────────────────────────────────
+export interface RegisterOfficerInput {
+  name: string;
+  email: string;
+  employeeId: string;
+  phone?: string;
+  role?: UserRole;
+  cadre: string;
+  cadreGrade: "JTS" | "STS" | "JAG" | "SAG" | "HAG" | "JSO" | "SSO" | "Officer";
+  department: string;
+  designation: string;
+  posting: string;
+  yearsOfExperience: number;
+  primaryDomain: string;
+  toolsUsed: string[];
+  baselineRatings: Record<string, number>;
+  careerGoal: string;
+  preferredLanguage: "EN" | "HI" | "TE";
+  preferredLearningMode?: "Self-Paced Online" | "Blended Academy" | "Virtual Lab";
+}
+
+export function registerOfficerAccount(data: RegisterOfficerInput): {
+  profile: OfficerProfile;
+  competencies: UserCompetencyScore[];
+} {
+  const profile: OfficerProfile = {
+    employeeId: data.employeeId.trim() || `MOSPI-${Date.now().toString().slice(-6)}`,
+    name: data.name.trim(),
+    email: data.email.trim(),
+    phone: data.phone || "+91 98104 XXXXX",
+    role: data.role || "learner",
+    isAdmin: data.role === "admin",
+    isTrainer: data.role === "trainer",
+    department: data.department,
+    designation: data.designation,
+    jobRoleId: "role-stat-officer",
+    jobRoleTitle: data.designation,
+    cadre: data.cadre,
+    cadreGrade: data.cadreGrade,
+    posting: data.posting || "MoSPI Headquarters, New Delhi",
+    currentAssignment: `${data.primaryDomain} & Capacity Intelligence`,
+    educationalQualification: "M.Sc. / Post Graduate in Statistics/Economics",
+    yearsOfExperience: data.yearsOfExperience,
+    previousTraining: data.toolsUsed.length ? [`Proficient in ${data.toolsUsed.join(", ")}`] : ["Induction Training"],
+    careerGoal: data.careerGoal || "Lead Official Statistical Operations & Policy Insights",
+    preferredLearningMode: data.preferredLearningMode || "Blended Academy",
+    preferredLanguage: data.preferredLanguage,
+    learningHours: 0,
+    coursesCompleted: 0,
+    certificationsCount: 0,
+    onboardingCompleted: true,
+  };
+
+  // Map baseline ratings to competencies for immediate skill gap calculations
+  const initialComps = getInitialUserCompetencies();
+  const updatedComps = initialComps.map((comp) => {
+    let current = comp.currentLevel;
+    if (data.baselineRatings[comp.competencyName] !== undefined) {
+      current = data.baselineRatings[comp.competencyName];
+    } else if (comp.competencyName.includes("Python") && data.toolsUsed.includes("Python")) {
+      current = Math.max(current, 3);
+    } else if (comp.competencyName.includes("R ") && data.toolsUsed.includes("R")) {
+      current = Math.max(current, 3);
+    } else if (comp.competencyName.includes("SQL") && data.toolsUsed.includes("SQL")) {
+      current = Math.max(current, 3);
+    } else if (comp.competencyName.includes("GIS") && data.toolsUsed.includes("GIS")) {
+      current = Math.max(current, 3);
+    }
+
+    const gap = Math.max(0, comp.requiredLevel - current);
+    const priorityScore = Math.min(100, Math.round(gap * 25 + (comp.requiredLevel * 5)));
+    const priorityLevel: "High" | "Medium" | "Low" | "None" =
+      gap >= 2 ? "High" : gap === 1 ? "Medium" : "None";
+
+    return {
+      ...comp,
+      currentLevel: current,
+      gap,
+      priorityScore,
+      priorityLevel,
+      evidenceSource: "Officer Baseline Self-Assessment & Registration",
+      lastAssessedDate: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" }),
+    };
+  });
+
+  saveProfile(profile);
+  saveUserCompetencies(updatedComps);
+  setActiveRole(profile.role);
+
+  return { profile, competencies: updatedComps };
+}

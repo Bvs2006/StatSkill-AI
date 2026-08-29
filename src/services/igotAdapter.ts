@@ -43,6 +43,7 @@ export interface SunbirdApiResponse<T = any> {
   };
   responseCode: "OK" | "CLIENT_ERROR" | "SERVER_ERROR";
   result: T;
+  source?: "live" | "mock";
 }
 
 export interface IgotCourseSummary {
@@ -269,10 +270,11 @@ export class IgotAdapter {
         });
 
         if (res.ok) {
-          return await res.json();
+          const json = await res.json();
+          return { ...json, source: "live" };
         }
-      } catch (err) {
-        console.warn("[iGOT Adapter] Live search failed, falling back to mock:", err);
+      } catch (err: any) {
+        console.warn("[iGOT Adapter] Live API call failed, falling back to mock data:", err.message);
       }
     }
 
@@ -301,6 +303,7 @@ export class IgotAdapter {
         count: results.length,
         content: results,
       },
+      source: "mock",
     };
   }
 
@@ -322,10 +325,11 @@ export class IgotAdapter {
           headers: this.getHeaders(),
         });
         if (res.ok) {
-          return await res.json();
+          const json = await res.json();
+          return { ...json, source: "live" };
         }
-      } catch (err) {
-        console.warn("[iGOT Adapter] Live hierarchy failed, using mock:", err);
+      } catch (err: any) {
+        console.warn("[iGOT Adapter] Live API call failed, falling back to mock data:", err.message);
       }
     }
 
@@ -386,6 +390,7 @@ export class IgotAdapter {
       result: {
         content: mockHierarchy,
       },
+      source: "mock",
     };
   }
 
@@ -413,10 +418,11 @@ export class IgotAdapter {
           }),
         });
         if (res.ok) {
-          return await res.json();
+          const json = await res.json();
+          return { ...json, source: "live" };
         }
-      } catch (err) {
-        console.warn("[iGOT Adapter] Live batch create failed, using mock:", err);
+      } catch (err: any) {
+        console.warn("[iGOT Adapter] Live API call failed, falling back to mock data:", err.message);
       }
     }
 
@@ -432,6 +438,7 @@ export class IgotAdapter {
       result: {
         batchId: `batch_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
       },
+      source: "mock",
     };
   }
 
@@ -455,10 +462,11 @@ export class IgotAdapter {
           body: JSON.stringify({ request: params }),
         });
         if (res.ok) {
-          return await res.json();
+          const json = await res.json();
+          return { ...json, source: "live" };
         }
-      } catch (err) {
-        console.warn("[iGOT Adapter] Live enrolment failed, using mock:", err);
+      } catch (err: any) {
+        console.warn("[iGOT Adapter] Live API call failed, falling back to mock data:", err.message);
       }
     }
 
@@ -474,6 +482,7 @@ export class IgotAdapter {
       result: {
         response: "SUCCESS",
       },
+      source: "mock",
     };
   }
 
@@ -508,10 +517,11 @@ export class IgotAdapter {
           }),
         });
         if (res.ok) {
-          return await res.json();
+          const json = await res.json();
+          return { ...json, source: "live" };
         }
-      } catch (err) {
-        console.warn("[iGOT Adapter] Live progress update failed, using mock:", err);
+      } catch (err: any) {
+        console.warn("[iGOT Adapter] Live API call failed, falling back to mock data:", err.message);
       }
     }
 
@@ -527,6 +537,7 @@ export class IgotAdapter {
       result: {
         response: "SUCCESS",
       },
+      source: "mock",
     };
   }
 
@@ -551,10 +562,11 @@ export class IgotAdapter {
           }),
         });
         if (res.ok) {
-          return await res.json();
+          const json = await res.json();
+          return { ...json, source: "live" };
         }
-      } catch (err) {
-        console.warn("[iGOT Adapter] Telemetry live dispatch failed:", err);
+      } catch (err: any) {
+        console.warn("[iGOT Adapter] Live API call failed, falling back to mock data:", err.message);
       }
     }
 
@@ -570,6 +582,7 @@ export class IgotAdapter {
       result: {
         response: "SUCCESS",
       },
+      source: "mock",
     };
   }
 

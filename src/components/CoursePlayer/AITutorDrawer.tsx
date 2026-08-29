@@ -1,5 +1,6 @@
-import React, { useState } from "react";
-import { chatWithStatisticalAssistant } from "../../services/aiService";
+import React, { useState, useEffect } from "react";
+import { chatWithAITutor } from "../../services/aiService";
+import { AIResponseMessage } from "../AIResponseMessage";
 
 interface AITutorDrawerProps {
   isOpen: boolean;
@@ -7,6 +8,11 @@ interface AITutorDrawerProps {
   courseTitle: string;
   topicTitle: string;
   activeSlideTitle?: string;
+  activeSlideContent?: {
+    key_points?: string[];
+    explanation?: string;
+    example?: string;
+  };
 }
 
 export function AITutorDrawer({
@@ -15,15 +21,21 @@ export function AITutorDrawer({
   courseTitle,
   topicTitle,
   activeSlideTitle,
+  activeSlideContent,
 }: AITutorDrawerProps) {
-  const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([
-    {
-      role: "assistant",
-      text: `Hello! I am your AI Lecture Tutor for **${topicTitle}**. Ask me any conceptual or practical question regarding this module.`,
-    },
-  ]);
+  const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string }[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // Sync initial message with current topic/slide
+  useEffect(() => {
+    setMessages([
+      {
+        role: "assistant",
+        text: `🎓 **Welcome to AI Lecture Tutoring!**\n\nI am your interactive tutor for **${topicTitle}**${activeSlideTitle ? ` (Slide: *${activeSlideTitle}*)` : ""}.\n\nAsk me to break down formulas, explain concepts in simple terms, provide sample Python code, or walk through real MoSPI survey examples!`,
+      },
+    ]);
+  }, [topicTitle, activeSlideTitle]);
 
   if (!isOpen) return null;
 
@@ -31,24 +43,28 @@ export function AITutorDrawer({
     const text = (textToSend || input).trim();
     if (!text || loading) return;
     setInput("");
-    setMessages((p) => [...p, { role: "user", text }]);
+    const newHistory = [...messages, { role: "user" as const, text }];
+    setMessages(newHistory);
     setLoading(true);
 
     try {
-      const reply = await chatWithStatisticalAssistant(
-        messages.map((m) => ({ role: m.role, content: m.text })).concat([{ role: "user", content: text }]),
+      const reply = await chatWithAITutor(
+        newHistory,
         {
-          name: "Statistical Officer",
-          designation: "Learner",
-          department: "MoSPI",
-          gaps: [topicTitle, activeSlideTitle || "General Methodology"],
+          courseTitle,
+          topicTitle,
+          activeSlideTitle,
+          activeSlideContent,
         }
       );
-      setMessages((p) => [...p, { role: "assistant", text: reply }]);
+      setMessages((p) => [...p, { role: "assistant", text: reply.text }]);
     } catch {
       setMessages((p) => [
         ...p,
-        { role: "assistant", text: "Vectorized operations and survey weight formulas are detailed in the official MoSPI technical manual." },
+        {
+          role: "assistant",
+          text: `In **${topicTitle}**, standard MoSPI methodologies ensure computational consistency across state directorates. Feel free to click any of the prompt chips above for an instant explanation.`,
+        },
       ]);
     } finally {
       setLoading(false);
@@ -57,12 +73,19 @@ export function AITutorDrawer({
 
   return (
     <div className="fixed inset-y-0 right-0 z-50 w-full max-w-md bg-white shadow-2xl border-l border-gray-200 flex flex-col animate-in slide-in-from-right">
-      <div className="p-4 bg-[#0B3D66] text-white flex justify-between items-center">
+      {/* Header */}
+      <div className="p-4 bg-[#0B3D66] text-white flex justify-between items-center shadow-xs">
         <div>
-          <div className="text-[10px] uppercase font-bold text-amber-300">Contextual AI Tutor</div>
-          <h3 className="text-xs font-bold truncate max-w-[280px]">{topicTitle}</h3>
+          <div className="flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span className="text-[10px] uppercase font-bold text-amber-300 tracking-wider">Contextual AI Lecture Tutor</span>
+          </div>
+          <h3 className="text-xs font-bold truncate max-w-[280px] mt-0.5">{topicTitle}</h3>
+          {activeSlideTitle && (
+            <p className="text-[10px] text-white/70 truncate max-w-[280px]">Slide: {activeSlideTitle}</p>
+          )}
         </div>
-        <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs">
+        <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center text-xs transition-colors cursor-pointer">
           ✕
         </button>
       </div>
@@ -71,13 +94,15 @@ export function AITutorDrawer({
       <div className="p-3 bg-gray-50 border-b border-gray-100 flex flex-wrap gap-1.5 text-[11px]">
         {[
           "Explain this slide simply",
-          "Give a real survey example",
-          "Why is this formula used?",
+          "Give a real MoSPI survey example",
+          "Break down the mathematical formula",
+          "Provide sample Python code",
+          "Quick concept quiz check",
         ].map((p) => (
           <button
             key={p}
             onClick={() => handleSend(p)}
-            className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-700 hover:border-[#0B3D66] hover:text-[#0B3D66] shadow-2xs"
+            className="px-2.5 py-1 rounded-lg bg-white border border-gray-200 text-gray-700 hover:border-[#0B3D66] hover:text-[#0B3D66] shadow-2xs transition-all cursor-pointer text-left"
           >
             💡 {p}
           </button>
@@ -85,20 +110,29 @@ export function AITutorDrawer({
       </div>
 
       {/* Message Stream */}
-      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50/50 text-xs">
+      <div className="flex-1 p-4 overflow-y-auto space-y-3 bg-gray-50/40 text-xs">
         {messages.map((m, idx) => (
           <div
             key={idx}
-            className={`p-3 rounded-2xl max-w-[90%] leading-relaxed ${
+            className={`p-3.5 rounded-3xl max-w-[92%] leading-relaxed ${
               m.role === "user"
-                ? "bg-[#0B3D66] text-white ml-auto rounded-br-none"
-                : "bg-white text-gray-800 border border-gray-100 shadow-2xs mr-auto rounded-bl-none"
+                ? "bg-[#0B3D66] text-white ml-auto rounded-br-none shadow-xs whitespace-pre-line"
+                : "bg-white text-gray-800 border border-gray-200/80 shadow-xs mr-auto rounded-bl-none"
             }`}
           >
-            {m.text}
+            {m.role === "user" ? (
+              <div>{m.text}</div>
+            ) : (
+              <AIResponseMessage content={m.text} />
+            )}
           </div>
         ))}
-        {loading && <div className="text-gray-400 text-xs italic">AI Tutor is reviewing official lecture context...</div>}
+        {loading && (
+          <div className="flex items-center gap-2 text-gray-400 text-xs italic p-2.5 bg-white/80 rounded-xl max-w-[240px]">
+            <span className="w-2 h-2 rounded-full bg-[#FF7A00] animate-ping" />
+            <span>AI Tutor reviewing lecture context...</span>
+          </div>
+        )}
       </div>
 
       {/* Input Box */}
@@ -108,13 +142,13 @@ export function AITutorDrawer({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
-          placeholder="Ask a question about this lecture..."
-          className="flex-1 px-3 py-2 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#0B3D66]"
+          placeholder={`Ask about ${activeSlideTitle || topicTitle}...`}
+          className="flex-1 px-3.5 py-2.5 text-xs border border-gray-200 rounded-xl focus:outline-none focus:border-[#0B3D66]"
         />
         <button
           onClick={() => handleSend()}
           disabled={loading}
-          className="px-4 py-2 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00]"
+          className="px-4 py-2.5 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00] cursor-pointer disabled:opacity-50"
         >
           Ask
         </button>

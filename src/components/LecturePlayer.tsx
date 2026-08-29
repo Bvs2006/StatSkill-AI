@@ -123,6 +123,10 @@ export function LecturePlayer({
     setSelectedQuizOption(null);
     setQuizAnswered(false);
     setAiSource("standard");
+
+    // Auto-generate lecture slides on load
+    handleAiRegenerateSlides();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chapter.id]);
 
   async function handleAiRegenerateSlides() {
@@ -136,7 +140,7 @@ export function LecturePlayer({
         baseSlides
       );
       setActiveSlides(newSlides);
-      setAiSource(source === "groq" ? "groq" : "standard");
+      setAiSource(source === "ai" ? "groq" : "standard");
     } catch (e) {
       console.error(e);
     } finally {

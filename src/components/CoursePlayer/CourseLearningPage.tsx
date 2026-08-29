@@ -5,7 +5,7 @@ import { AISlidePlayer, type AISlide, type LectureSegment } from "./AISlidePlaye
 import { TopicSidebar, type TopicItem } from "./TopicSidebar";
 import { TopicQuizModal, type QuizQuestion } from "./TopicQuizModal";
 import { AITutorDrawer } from "./AITutorDrawer";
-import { CourseItem, applyClosedLoopCompetencyUpdate } from "../../services/storageService";
+import { CourseItem, applyClosedLoopCompetencyUpdate, issueDigitalCredential } from "../../services/storageService";
 
 interface CourseLearningPageProps {
   course: CourseItem;
@@ -165,6 +165,17 @@ export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) 
         scorePct: 100,
         evidence: `Completed Topic: ${currentTopic.title} (${course.provider})`,
       });
+
+      // If all topics are completed, automatically issue the verifiable credential!
+      if (updated.length >= topics.length) {
+        issueDigitalCredential({
+          title: course.title,
+          issuer: course.provider === "NSSTA" ? "NSSTA" : "iGOT Karmayogi",
+          competencyPillars: [course.primaryCompetency, course.category],
+          scorePct: 95,
+          cpdHours: parseInt(course.duration) || 12,
+        });
+      }
     }
   }
 
@@ -279,6 +290,15 @@ export function CourseLearningPage({ course, onBack }: CourseLearningPageProps) 
         courseTitle={course.title}
         topicTitle={currentTopic.title}
         activeSlideTitle={slides[currentSlide - 1]?.title}
+        activeSlideContent={
+          slides[currentSlide - 1]
+            ? {
+                key_points: slides[currentSlide - 1]?.key_points,
+                explanation: slides[currentSlide - 1]?.explanation,
+                example: slides[currentSlide - 1]?.example,
+              }
+            : undefined
+        }
       />
     </div>
   );

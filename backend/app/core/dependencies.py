@@ -1,9 +1,10 @@
 from typing import Optional, List, Callable
-from fastapi import Depends, Header
+from fastapi import Depends, Header, HTTPException
 from app.core.security import decode_supabase_jwt, extract_user_role
 from app.core.exceptions import CredentialsException, PermissionDeniedException
 from app.schemas.user import AuthenticatedUser, UserProfileResponse
 from app.db.supabase import get_supabase_client
+from app.core.config import settings
 
 
 async def get_current_user(
@@ -13,8 +14,9 @@ async def get_current_user(
     Validates Supabase Bearer token, extracts user claims, and optionally looks up the profile table.
     """
     if not authorization:
-        # For development ease / demo accounts without live token, provide a fallback demo user
-        return AuthenticatedUser(
+        if settings.ENVIRONMENT == "development":
+            # For development ease / demo accounts without live token, provide a fallback demo user
+            return AuthenticatedUser(
             id="00000000-0000-0000-0000-000000000001",
             email="rajesh.sharma@nic.in",
             role="learner",
@@ -36,6 +38,8 @@ async def get_current_user(
                 onboarding_completed=True,
             ),
         )
+        else:
+            raise HTTPException(status_code=401, detail='Authentication required')
 
     parts = authorization.split(" ")
     if len(parts) != 2 or parts[0].lower() != "bearer":

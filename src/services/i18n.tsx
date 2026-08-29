@@ -13,6 +13,7 @@ export interface Translations {
   role_trainer: string;
 
   // Navigation
+  nav_landing: string;
   nav_dashboard: string;
   nav_skills: string;
   nav_assessment: string;
@@ -53,6 +54,7 @@ const DICTIONARY: Record<Language, Translations> = {
     role_admin: "Ministry Administrator",
     role_trainer: "Academy Trainer & Evaluator",
 
+    nav_landing: "Overview",
     nav_dashboard: "Dashboard",
     nav_skills: "My Skills",
     nav_assessment: "Competency Assessment",
@@ -90,6 +92,7 @@ const DICTIONARY: Record<Language, Translations> = {
     role_admin: "मंत्रालय प्रशासक",
     role_trainer: "अकादमी प्रशिक्षक एवं मूल्यांकनकर्ता",
 
+    nav_landing: "अवलोकन",
     nav_dashboard: "डैशबोर्ड",
     nav_skills: "मेरी दक्षता",
     nav_assessment: "दक्षता मूल्यांकन",
@@ -127,6 +130,7 @@ const DICTIONARY: Record<Language, Translations> = {
     role_admin: "మంత్రిత్వ శాఖ నిర్వాహకుడు",
     role_trainer: "శిక్షకుడు మరియు మూల్యాంకనదారుడు",
 
+    nav_landing: "అవలోకనం",
     nav_dashboard: "డ్యాష్‌బోర్డ్",
     nav_skills: "నా నైపుణ్యాలు",
     nav_assessment: "నైపుణ్య మూల్యాంకనం",

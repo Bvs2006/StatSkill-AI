@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.dependencies import get_current_user
 from app.schemas.user import AuthenticatedUser
 from app.schemas.course_player import (
+    CourseSummary,
     CourseTopicBase,
     YouTubeTranscriptItem,
     AILectureResponse,
@@ -15,6 +16,16 @@ from app.schemas.course_player import (
 from app.services.course_player_service import CoursePlayerService
 
 router = APIRouter(prefix="", tags=["Course Learning Player & AI Lectures"])
+    
+@router.get("/courses", response_model=List[CourseSummary], summary="Get Available Courses")
+async def get_courses(
+    current_user: AuthenticatedUser = Depends(get_current_user),
+):
+    """
+    Returns a list of available courses.
+    """
+    return CoursePlayerService.get_courses()
+
 
 
 @router.get("/courses/{course_id}/topics", response_model=List[CourseTopicBase], summary="Get Course Topics")

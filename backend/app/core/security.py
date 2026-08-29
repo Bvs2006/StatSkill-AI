@@ -10,12 +10,19 @@ def decode_supabase_jwt(token: str) -> Dict[str, Any]:
     In development / test mode without JWT secret verification, validates standard claims.
     """
     try:
-        # In production with JWT secret, verify_signature=True and key=SUPABASE_JWT_SECRET
-        payload = jwt.decode(
-            token,
-            options={"verify_signature": False, "verify_aud": False},
-            algorithms=["HS256", "RS256"],
-        )
+        if settings.ENVIRONMENT == "development":
+            payload = jwt.decode(
+                token,
+                options={"verify_signature": False, "verify_aud": False},
+                algorithms=["HS256", "RS256"],
+            )
+        else:
+            payload = jwt.decode(
+                token,
+                key=settings.SUPABASE_JWT_SECRET,
+                options={"verify_signature": True, "verify_aud": False},
+                algorithms=["HS256", "RS256"],
+            )
         return payload
     except jwt.PyJWTError as e:
         raise CredentialsException(f"Invalid authentication token: {str(e)}")

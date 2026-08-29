@@ -89,6 +89,8 @@ export interface CourseItem {
   completedDate?: string;
   learningOutcomes?: string[];
   syllabusModules?: { id: string; title: string; duration: string }[];
+  competencyTarget?: string;
+  imageUrl?: string;
 }
 
 export interface NsstaTrainingProgramme {
@@ -222,4 +224,22 @@ export interface NotificationItem {
   timestamp: string;
   read: boolean;
   type: "recommendation" | "competency_update" | "quiz_completed" | "programme_alert";
+}
+
+export interface VerifiableCertificate {
+  id: string;
+  title: string;
+  issuer: "iGOT Karmayogi" | "NSSTA" | "MoSPI Capacity Board";
+  issuedTo: string;
+  employeeId?: string;
+  cadre?: string;
+  issueDate: string;
+  expiryDate: string;
+  verificationHash: string;
+  credentialId: string;
+  competencyPillars: string[];
+  scorePct: number;
+  grade: "Distinction" | "Merit" | "Pass";
+  cpdHours: number;
+  signatureAlgorithm?: string;
 }

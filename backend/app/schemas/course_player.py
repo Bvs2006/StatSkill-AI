@@ -4,6 +4,13 @@ from datetime import datetime
 from uuid import UUID
 
 
+class CourseSummary(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    provider: Optional[str] = "iGOT Karmayogi"
+    duration_hours: Optional[float] = None
+
 class CourseTopicBase(BaseModel):
     id: str
     course_id: str

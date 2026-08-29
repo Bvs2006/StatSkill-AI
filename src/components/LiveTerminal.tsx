@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { runPythonCode, runSqlQuery, type ExecutionResult } from "../services/pyodideRunner";
+import { applyClosedLoopCompetencyUpdate } from "../services/storageService";
 
 export interface LabExercise {
   id: string;
@@ -264,12 +265,37 @@ export function LiveTerminalModal({
     setResult(null);
     setActiveTab("terminal");
     try {
+      let res: ExecutionResult;
       if (selectedEx.language === "python") {
-        const res = await runPythonCode(code);
-        setResult(res);
+        res = await runPythonCode(code);
       } else {
-        const res = await runSqlQuery(code);
-        setResult(res);
+        res = await runSqlQuery(code);
+      }
+      setResult(res);
+      
+      if (res.success) {
+        // Map domains to competencies for demo purposes
+        const compMapping: Record<string, string> = {
+          "Official Statistics & Price Indices": "Price Statistics (CPI / WPI)",
+          "Survey Sampling & PLFS": "Sampling Theory & PPS",
+          "Database Management & Big Data": "SQL & Database Querying",
+          "National Accounts & SDC Aggregates": "National Accounts & GVA",
+          "Data Privacy & SDC Governance": "Data Privacy (DPDP Act)",
+        };
+        const competencyName = compMapping[selectedEx.domain] || "Python for Data Analysis";
+
+        applyClosedLoopCompetencyUpdate({
+          competencyName,
+          scorePct: 100, // Lab success counts as full points
+          evidence: `Virtual Lab Completed: ${selectedEx.title}`,
+        });
+
+        // Add to completed list
+        const completed = JSON.parse(localStorage.getItem("statskill_completed_labs") || "[]");
+        if (!completed.includes(selectedEx.id)) {
+          completed.push(selectedEx.id);
+          localStorage.setItem("statskill_completed_labs", JSON.stringify(completed));
+        }
       }
     } catch (e: any) {
       setResult({

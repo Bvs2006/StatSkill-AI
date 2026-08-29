@@ -160,6 +160,19 @@ MOCK_QUIZZES: Dict[str, List[Dict[str, Any]]] = {
 
 class CoursePlayerService:
     @staticmethod
+    def get_courses() -> List[Dict[str, Any]]:
+        # Returns a mock list of courses
+        return [
+            {
+                "id": "igot-101",
+                "title": "Official Data Science with Python",
+                "description": "Foundations for Official Statistics.",
+                "provider": "iGOT Karmayogi",
+                "duration_hours": 1.6
+            }
+        ]
+
+    @staticmethod
     def get_course_topics(course_id: str) -> List[CourseTopicBase]:
         # Check DB first
         try:
@@ -167,8 +180,8 @@ class CoursePlayerService:
             res = sb.table("course_topics").select("*").eq("course_id", course_id).order("sequence_order").execute()
             if res.data and len(res.data) > 0:
                 return [CourseTopicBase(**item) for item in res.data]
-        except Exception as e:
-            logger.warning(f"Error querying course_topics table: {e}")
+        except Exception:
+            logger.exception("Error querying course_topics table")
 
         # Return mock topics
         topics = MOCK_TOPICS.get(course_id) or MOCK_TOPICS["igot-101"]
@@ -249,7 +262,7 @@ class CoursePlayerService:
                     status=p.get("status", "IN_PROGRESS"),
                 )
         except Exception:
-            pass
+            logger.exception("Error querying user course progress")
 
         return CourseProgressResponse(
             id=f"prog-{user_id}-{course_id}",
@@ -314,8 +327,8 @@ class CoursePlayerService:
                 "total_topics": updated.total_topics,
                 "status": updated.status,
             }).execute()
-        except Exception as e:
-            logger.warning(f"Error persisting course_progress: {e}")
+        except Exception:
+            logger.exception("Error persisting course_progress")
 
         return updated
 
