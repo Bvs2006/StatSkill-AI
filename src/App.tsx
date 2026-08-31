@@ -5102,40 +5102,228 @@ function CertificatesScreen() {
 // ──────────────────────────────────────────────
 
 function VirtualLabsScreen() {
+  const { t, lang } = useLanguage();
   const [selectedLab, setSelectedLab] = useState<LabExercise | null>(null);
+  const [selectedDomain, setSelectedDomain] = useState<string>("all");
+  const [selectedLanguage, setSelectedLanguage] = useState<string>("all");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const domainTabs = [
+    { id: "all", label: lang === "HI" ? "सभी सैंडबॉक्स" : lang === "TE" ? "అన్ని ల్యాబ్‌లు" : "All Sandboxes", count: OFFICIAL_LAB_EXERCISES.length, icon: "🧪" },
+    { id: "price", label: lang === "HI" ? "मूल्य सांख्यिकी (CPI/WPI)" : lang === "TE" ? "ధరల గణాంకాలు (CPI/WPI)" : "Price Statistics (CPI/WPI)", count: 2, icon: "🏷️" },
+    { id: "survey", label: lang === "HI" ? "सर्वेक्षण एवं पीएलएफएस" : lang === "TE" ? "సర్వే & PLFS" : "Survey & PLFS", count: 2, icon: "📋" },
+    { id: "accounts", label: lang === "HI" ? "राष्ट्रीय लेखा (GVA/SUT)" : lang === "TE" ? "జాతీయ ఖాతాలు (GVA/SUT)" : "National Accounts (GVA/SUT)", count: 2, icon: "📊" },
+    { id: "privacy", label: lang === "HI" ? "डेटा गोपनीयता (DPDP)" : lang === "TE" ? "డేటా గోప్యత (DPDP)" : "Data Privacy (DPDP)", count: 1, icon: "🔒" },
+    { id: "database", label: lang === "HI" ? "एसक्यूएल डेटाबेस (ASI)" : lang === "TE" ? "SQL డేటాబేస్ (ASI)" : "SQL Databases (ASI)", count: 2, icon: "💾" },
+    { id: "geospatial", label: lang === "HI" ? "भू-स्थानिक ढांचा (UFS)" : lang === "TE" ? "జియోస్పేషియల్ (UFS)" : "Geospatial (UFS)", count: 1, icon: "🗺️" },
+  ];
+
+  const filteredLabs = OFFICIAL_LAB_EXERCISES.filter((lab) => {
+    const matchesSearch =
+      lab.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lab.instructions.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      lab.domain.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesDomain =
+      selectedDomain === "all" ||
+      (selectedDomain === "price" && (lab.id === "lab-cpi" || lab.id === "lab-wpi-jevons")) ||
+      (selectedDomain === "survey" && (lab.id === "lab-plfs-weights" || lab.id === "lab-plfs-rates")) ||
+      (selectedDomain === "accounts" && (lab.id === "lab-gva-rebase" || lab.id === "lab-sut-ras")) ||
+      (selectedDomain === "privacy" && lab.id === "lab-dpdp-k-anonymity") ||
+      (selectedDomain === "database" && (lab.id === "lab-sql-census" || lab.id === "lab-asi-sql")) ||
+      (selectedDomain === "geospatial" && lab.id === "lab-ufs-geospatial");
+
+    const matchesLanguage = selectedLanguage === "all" || lab.language === selectedLanguage;
+    const matchesDifficulty = selectedDifficulty === "all" || lab.difficulty === selectedDifficulty;
+
+    return matchesSearch && matchesDomain && matchesLanguage && matchesDifficulty;
+  });
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Virtual Computing Sandboxes</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          In-browser Python 3.11 with NumPy/Pandas and SQLite engines running directly via WebAssembly.
-        </p>
-      </div>
+    <div className="max-w-6xl mx-auto space-y-6 font-sans">
+      {/* Header Banner */}
+      <div className="bg-gradient-to-r from-[#1864A6] via-[#0F4C81] to-[#0B3D66] rounded-3xl p-6 md:p-8 text-white shadow-xl border border-white/15 relative overflow-hidden flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-2xl pointer-events-none" />
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {OFFICIAL_LAB_EXERCISES.map((lab) => (
-          <div key={lab.id} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-2xs space-y-3 flex flex-col justify-between">
-            <div>
-              <div className="flex justify-between items-center">
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${lab.language === "python" ? "bg-amber-100 text-amber-900" : "bg-blue-100 text-blue-900"}`}>
-                  {lab.language.toUpperCase()}
-                </span>
-                <span className="text-[10px] font-bold text-gray-400">{lab.difficulty}</span>
-              </div>
-              <h3 className="text-xs font-bold text-[#0B3D66] mt-2">{lab.title}</h3>
-              <p className="text-[11px] text-gray-500 mt-1 line-clamp-2">{lab.instructions}</p>
-            </div>
-
-            <button
-              onClick={() => setSelectedLab(lab)}
-              className="w-full py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] cursor-pointer"
-            >
-              Launch Live Sandbox →
-            </button>
+        <div className="relative z-10 space-y-2 max-w-2xl">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[10px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-400/20 text-amber-200 border border-amber-300/30">
+              ⚡ Pyodide WASM Engine v0.25 Active
+            </span>
+            <span className="text-[10px] text-emerald-300 font-semibold flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              100% Client-Side Sandbox Execution
+            </span>
           </div>
-        ))}
+
+          <h1 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight">
+            {lang === "HI"
+              ? "वर्चुअल कंप्यूटिंग सांख्यिकी प्रयोगशालाएं"
+              : lang === "TE"
+              ? "వర్చువల్ గణాంక కంప్యూటింగ్ ల్యాబ్‌లు"
+              : "Virtual Computing Statistical Sandboxes"}
+          </h1>
+
+          <p className="text-xs text-blue-100 leading-relaxed">
+            {lang === "HI"
+              ? "ब्राउज़र में सीधे पायथन 3.11 (NumPy/Pandas) और SQLite इंजन चलाएं। सीपीआई, पीएलएफएस गुणक, एसएनए 2008 एसयूटी और डीपीडीपी गोपनीयता का अभ्यास करें।"
+              : lang === "TE"
+              ? "బ్రౌజర్‌లో నేరుగా పైథాన్ 3.11 (NumPy/Pandas) మరియు SQLite ఇంజిన్‌లను రన్ చేయండి. ఎటువంటి ఇన్‌స్టాలేషన్ లేకుండా CPI, PLFS, SNA 2008 మరియు DPDP సూత్రాలను అభ్యసించండి."
+              : "In-browser Python 3.11 with NumPy/Pandas and SQLite engines running directly via WebAssembly (WASM). Solve official exercises and trigger closed-loop competency elevation."}
+          </p>
+        </div>
+
+        {/* Quick Sandbox Stats */}
+        <div className="relative z-10 flex md:flex-col items-center md:items-end gap-3 shrink-0">
+          <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 text-right">
+            <div className="text-lg font-bold font-serif text-amber-300">{OFFICIAL_LAB_EXERCISES.length} Live Labs</div>
+            <div className="text-[10px] text-blue-200">Across 6 Cadre Disciplines</div>
+          </div>
+        </div>
       </div>
+
+      {/* Domain Category Filter Tabs */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {domainTabs.map((tab) => {
+          const isActive = selectedDomain === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setSelectedDomain(tab.id)}
+              className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-2 ${
+                isActive
+                  ? "bg-[#0B3D66] text-white shadow-md shadow-blue-900/20"
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-100"
+              }`}
+            >
+              <span>{tab.icon}</span>
+              <span>{tab.label}</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? "bg-white/20 text-white" : "bg-gray-100 text-gray-500"}`}>
+                {tab.count}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Search & Filter Bar */}
+      <div className="bg-white p-3.5 rounded-3xl border border-gray-100 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="relative w-full sm:w-80">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={
+              lang === "HI"
+                ? "प्रयोगशाला खोजें (CPI, WPI, PLFS, SQL, SUT)..."
+                : lang === "TE"
+                ? "ల్యాబ్‌లను శోధించండి (CPI, WPI, PLFS, SQL, SUT)..."
+                : "Search sandboxes (CPI, WPI, PLFS, SQL, SUT)..."
+            }
+            className="w-full pl-8 pr-3 py-2 bg-gray-50 rounded-xl text-xs text-gray-800 border border-gray-200 focus:outline-none focus:border-[#0B3D66]"
+          />
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+          {/* Language Selector */}
+          <select
+            value={selectedLanguage}
+            onChange={(e) => setSelectedLanguage(e.target.value)}
+            className="px-3 py-2 bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:outline-none cursor-pointer"
+          >
+            <option value="all">{lang === "HI" ? "सभी भाषाएँ" : lang === "TE" ? "అన్ని భాషలు" : "All Languages"}</option>
+            <option value="python">Python 3.11 (NumPy/Pandas)</option>
+            <option value="sql">SQLite 3 (Relational DB)</option>
+          </select>
+
+          {/* Difficulty Selector */}
+          <select
+            value={selectedDifficulty}
+            onChange={(e) => setSelectedDifficulty(e.target.value)}
+            className="px-3 py-2 bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:outline-none cursor-pointer"
+          >
+            <option value="all">{lang === "HI" ? "सभी स्तर" : lang === "TE" ? "అన్ని స్థాయిలు" : "All Levels"}</option>
+            <option value="Basic">{lang === "HI" ? "बुनियादी (Basic)" : lang === "TE" ? "ప్రాథమిక (Basic)" : "Basic"}</option>
+            <option value="Intermediate">{lang === "HI" ? "मध्यवर्ती (Intermediate)" : lang === "TE" ? "మధ్యస్థ (Intermediate)" : "Intermediate"}</option>
+            <option value="Advanced">{lang === "HI" ? "उन्नत (Advanced)" : lang === "TE" ? "ఉన్నత (Advanced)" : "Advanced"}</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Grid of Virtual Labs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filteredLabs.map((lab) => {
+          const isPython = lab.language === "python";
+          return (
+            <div
+              key={lab.id}
+              className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all space-y-4 flex flex-col justify-between group"
+            >
+              <div className="space-y-2.5">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-1.5">
+                    <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                      isPython ? "bg-amber-100 text-amber-900 border border-amber-200" : "bg-blue-100 text-blue-900 border border-blue-200"
+                    }`}>
+                      {isPython ? "🐍 PYTHON 3.11" : "💾 SQLITE 3"}
+                    </span>
+                    <span className="text-[9px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
+                      WASM
+                    </span>
+                  </div>
+
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                    lab.difficulty === "Basic"
+                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                      : lab.difficulty === "Intermediate"
+                      ? "bg-blue-50 text-blue-700 border border-blue-200"
+                      : "bg-purple-50 text-purple-700 border border-purple-200"
+                  }`}>
+                    {lab.difficulty}
+                  </span>
+                </div>
+
+                <div className="text-[10px] font-extrabold uppercase text-[#FF7A00] tracking-wider">
+                  {lab.domain}
+                </div>
+
+                <h3 className="text-xs font-bold text-[#0B3D66] group-hover:text-[#FF7A00] transition-colors leading-snug line-clamp-2">
+                  {lab.title}
+                </h3>
+
+                <p className="text-[11px] text-gray-500 line-clamp-3 leading-relaxed">
+                  {lab.instructions}
+                </p>
+              </div>
+
+              <div className="pt-3 border-t border-gray-100 space-y-2">
+                <div className="flex items-center justify-between text-[10px] text-gray-400">
+                  <span>🎯 Closed-Loop Verified</span>
+                  <span>⚡ Instant Run</span>
+                </div>
+
+                <button
+                  onClick={() => setSelectedLab(lab)}
+                  className="w-full py-2.5 bg-[#0B3D66] hover:bg-[#FF7A00] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>🚀 {lang === "HI" ? "लाइव सैंडबॉक्स खोलें" : lang === "TE" ? "లైవ్ ల్యాబ్ ప్రారంభించండి" : "Launch Live Sandbox"}</span>
+                  <span>→</span>
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {filteredLabs.length === 0 && (
+        <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 space-y-3">
+          <div className="text-3xl">🧪</div>
+          <div className="text-sm font-bold text-gray-700">No matching sandboxes found</div>
+          <div className="text-xs text-gray-400">Try adjusting your domain category or search filters.</div>
+        </div>
+      )}
 
       {selectedLab && (
         <LiveTerminalModal

@@ -365,6 +365,341 @@ print(f"DPDP Act Public Release Status : {'COMPLIANT (APPROVED)' if is_compliant
 105,2702,45-54,M,Normal
 106,2702,45-54,M,Hypertension`,
   },
+  {
+    id: "lab-wpi-jevons",
+    title: "Wholesale Price Index (WPI) Jevons Geometric Mean Aggregation",
+    domain: "Official Statistics & Price Indices",
+    language: "python",
+    difficulty: "Intermediate",
+    instructions: "Compute the elementary price index for primary food articles using the Jevons Geometric Mean formula across mandi quotation centers.",
+    initialCode: `# WPI Price Statistics Lab: Jevons Geometric Mean Elementary Index
+# Formula: Jevons Index = (product(P_t / P_0)) ** (1 / N) * 100
+
+import math
+
+mandi_quotations = [
+    {"center": "Khanna Mandi (Punjab)", "item": "Wheat Grade A", "base_price": 2015.0, "current_price": 2350.0},
+    {"center": "Karnal Mandi (Haryana)", "item": "Wheat Grade A", "base_price": 2020.0, "current_price": 2380.0},
+    {"center": "Bhopal Mandi (MP)", "item": "Wheat Grade A", "base_price": 1980.0, "current_price": 2290.0},
+    {"center": "Kota Mandi (Rajasthan)", "item": "Wheat Grade A", "base_price": 2000.0, "current_price": 2340.0},
+    {"center": "Hapur Mandi (UP)", "item": "Wheat Grade A", "base_price": 2050.0, "current_price": 2410.0},
+]
+
+jevons_index = 0.0
+dutot_index = 0.0
+
+# TODO: 1. Calculate price relatives (current_price / base_price) for each mandi center
+# TODO: 2. Calculate Jevons Index = (product of all relatives) ** (1 / len(mandi_quotations)) * 100
+# TODO: 3. Calculate Dutot Index = (sum(current_price) / sum(base_price)) * 100
+
+# --- WRITE YOUR PYTHON CODE BELOW ---
+
+
+
+print("═══════════════════════════════════════════════════")
+print("   WPI ELEMENTARY PRICE INDEX COMPILATION (WHEAT)  ")
+print("═══════════════════════════════════════════════════")
+print(f"Total Mandi Quotation Centers : {len(mandi_quotations)}")
+print(f"Jevons Geometric Mean Index   : {jevons_index:.2f}")
+print(f"Dutot Arithmetic Mean Index   : {dutot_index:.2f}")
+print(f"Formula Divergence            : {abs(dutot_index - jevons_index):.3f} pts")
+`,
+    solutionCode: `# WPI Price Statistics Lab: Jevons Geometric Mean Elementary Index
+import math
+
+mandi_quotations = [
+    {"center": "Khanna Mandi (Punjab)", "item": "Wheat Grade A", "base_price": 2015.0, "current_price": 2350.0},
+    {"center": "Karnal Mandi (Haryana)", "item": "Wheat Grade A", "base_price": 2020.0, "current_price": 2380.0},
+    {"center": "Bhopal Mandi (MP)", "item": "Wheat Grade A", "base_price": 1980.0, "current_price": 2290.0},
+    {"center": "Kota Mandi (Rajasthan)", "item": "Wheat Grade A", "base_price": 2000.0, "current_price": 2340.0},
+    {"center": "Hapur Mandi (UP)", "item": "Wheat Grade A", "base_price": 2050.0, "current_price": 2410.0},
+]
+
+relatives = [q["current_price"] / q["base_price"] for q in mandi_quotations]
+product_rel = math.prod(relatives)
+n = len(mandi_quotations)
+
+jevons_index = (product_rel ** (1.0 / n)) * 100.0
+
+sum_current = sum(q["current_price"] for q in mandi_quotations)
+sum_base = sum(q["base_price"] for q in mandi_quotations)
+dutot_index = (sum_current / sum_base) * 100.0
+
+print("═══════════════════════════════════════════════════")
+print("   WPI ELEMENTARY PRICE INDEX COMPILATION (WHEAT)  ")
+print("═══════════════════════════════════════════════════")
+print(f"Total Mandi Quotation Centers : {len(mandi_quotations)}")
+print(f"Jevons Geometric Mean Index   : {jevons_index:.2f}")
+print(f"Dutot Arithmetic Mean Index   : {dutot_index:.2f}")
+print(f"Formula Divergence            : {abs(dutot_index - jevons_index):.3f} pts")
+`,
+    solutionHint: "Calculate relatives = [p_t / p_0 for q in mandi_quotations], then jevons = (math.prod(relatives) ** (1/len(relatives))) * 100.",
+    sampleData: `Center_Name,Item,Base_Price_Rs,Current_Price_Rs
+Khanna Mandi,Wheat Grade A,2015.00,2350.00
+Karnal Mandi,Wheat Grade A,2020.00,2380.00
+Bhopal Mandi,Wheat Grade A,1980.00,2290.00
+Kota Mandi,Wheat Grade A,2000.00,2340.00
+Hapur Mandi,Wheat Grade A,2050.00,2410.00`,
+  },
+  {
+    id: "lab-plfs-rates",
+    title: "PLFS Labour Indicators: LFPR, WPR & Unemployment Rate",
+    domain: "Survey Sampling & PLFS",
+    language: "python",
+    difficulty: "Basic",
+    instructions: "Write a script to compute the Labour Force Participation Rate (LFPR), Worker Population Ratio (WPR), and Unemployment Rate (UR) for Principal Status from survey sample data.",
+    initialCode: `# PLFS Labour Statistics Lab: Key Indicator Compilation
+# Definitions (MoSPI Standards):
+# Labour Force = Employed + Unemployed
+# LFPR (%) = (Labour Force / Total Survey Population) * 100
+# WPR (%)  = (Total Employed / Total Survey Population) * 100
+# UR (%)   = (Total Unemployed / Labour Force) * 100
+
+population_sample = {
+    "total_population": 50000,
+    "employed_principal_status": 24500,
+    "unemployed_seeking_work": 1500,
+    "out_of_labour_force": 24000
+}
+
+lfpr = 0.0
+wpr = 0.0
+ur = 0.0
+
+# TODO: 1. Calculate labour_force = employed + unemployed
+# TODO: 2. Calculate lfpr, wpr, and ur according to official formulas
+
+# --- WRITE YOUR PYTHON CODE BELOW ---
+
+
+
+print("═══════════════════════════════════════════════════")
+print("     PLFS KEY LABOUR MARKET INDICATORS REPORT      ")
+print("═══════════════════════════════════════════════════")
+print(f"Labour Force Participation Rate (LFPR) : {lfpr:.2f}%")
+print(f"Worker Population Ratio (WPR)          : {wpr:.2f}%")
+print(f"Unemployment Rate (UR)                 : {ur:.2f}%")
+`,
+    solutionCode: `# PLFS Labour Statistics Lab: Key Indicator Compilation
+population_sample = {
+    "total_population": 50000,
+    "employed_principal_status": 24500,
+    "unemployed_seeking_work": 1500,
+    "out_of_labour_force": 24000
+}
+
+tot = population_sample["total_population"]
+emp = population_sample["employed_principal_status"]
+unemp = population_sample["unemployed_seeking_work"]
+
+labour_force = emp + unemp
+
+lfpr = (labour_force / tot) * 100.0
+wpr = (emp / tot) * 100.0
+ur = (unemp / labour_force) * 100.0
+
+print("═══════════════════════════════════════════════════")
+print("     PLFS KEY LABOUR MARKET INDICATORS REPORT      ")
+print("═══════════════════════════════════════════════════")
+print(f"Labour Force Participation Rate (LFPR) : {lfpr:.2f}%")
+print(f"Worker Population Ratio (WPR)          : {wpr:.2f}%")
+print(f"Unemployment Rate (UR)                 : {ur:.2f}%")
+`,
+    solutionHint: "Labour Force is (emp + unemp). UR is (unemployed / labour_force) * 100.",
+    sampleData: `Demographic_Category,Person_Count,Share_Pct
+Employed (Principal Status),24500,49.0%
+Unemployed (Actively Seeking),1500,3.0%
+Out of Labour Force (Students/Elderly),24000,48.0%`,
+  },
+  {
+    id: "lab-asi-sql",
+    title: "Annual Survey of Industries (ASI) Factory Gross Value Added",
+    domain: "Database Management & Big Data",
+    language: "sql",
+    difficulty: "Intermediate",
+    instructions: "Write a SQL query over ASI_Factory_Registry to compute Total_Gross_Output, Total_Inputs, and Gross_Value_Added (Gross_Output - Total_Inputs) grouped by State_Code where Factory_Status = 'Operational'.",
+    initialCode: `-- Official SQL Lab: Annual Survey of Industries (ASI)
+-- Problem: Calculate Gross Value Added (GVA = Gross_Output - Total_Inputs) by State.
+-- Table: ASI_Establishments_2026
+-- Columns: State_Code, Gross_Output_Lakhs, Total_Inputs_Lakhs, Factory_Status
+
+-- Requirements:
+-- 1. SELECT State_Code, SUM(Gross_Output_Lakhs) as Total_Output, SUM(Total_Inputs_Lakhs) as Total_Inputs, (SUM(Gross_Output_Lakhs) - SUM(Total_Inputs_Lakhs)) as GVA_Lakhs
+-- 2. FROM ASI_Establishments_2026
+-- 3. WHERE Factory_Status = 'Operational'
+-- 4. GROUP BY State_Code
+-- 5. ORDER BY GVA_Lakhs DESC
+
+-- --- WRITE YOUR SQL QUERY BELOW ---
+
+
+`,
+    solutionCode: `-- Official SQL Lab: Annual Survey of Industries (ASI)
+SELECT 
+    State_Code,
+    SUM(Gross_Output_Lakhs) AS Total_Output,
+    SUM(Total_Inputs_Lakhs) AS Total_Inputs,
+    (SUM(Gross_Output_Lakhs) - SUM(Total_Inputs_Lakhs)) AS GVA_Lakhs
+FROM 
+    ASI_Establishments_2026
+WHERE 
+    Factory_Status = 'Operational'
+GROUP BY 
+    State_Code
+ORDER BY 
+    GVA_Lakhs DESC;`,
+    solutionHint: "Use GROUP BY State_Code and calculate (SUM(Gross_Output_Lakhs) - SUM(Total_Inputs_Lakhs)) AS GVA_Lakhs.",
+    sampleData: `Factory_ID,State_Code,NIC_2Digit,Gross_Output_Lakhs,Total_Inputs_Lakhs,Factory_Status
+F1001,27 (MAH),10 (Food),4500.00,3100.00,Operational
+F1002,24 (GUJ),20 (Chemicals),8200.00,5400.00,Operational
+F1003,33 (TN),29 (Auto),6100.00,4200.00,Operational
+F1004,29 (KTK),26 (Electronics),5300.00,3500.00,Operational
+F1005,07 (DEL),18 (Printing),1200.00,800.00,Operational
+F1006,27 (MAH),13 (Textiles),3400.00,2300.00,Operational`,
+  },
+  {
+    id: "lab-sut-ras",
+    title: "Supply-Use Tables (SUT) Matrix Balancing via RAS Algorithm",
+    domain: "National Accounts & SDC Aggregates",
+    language: "python",
+    difficulty: "Advanced",
+    instructions: "Write a script to perform 1 iteration of the RAS biproportional matrix balancing algorithm to adjust intermediate input cells to match updated row and column target totals.",
+    initialCode: `# UN SNA 2008 National Accounts Lab: SUT Matrix Balancing (RAS)
+# Problem: Balance a 2x2 Intermediate Consumption Matrix to target row sums and col sums.
+
+import numpy as np
+
+# Initial Intermediate Matrix A0
+A = np.array([
+    [100.0, 200.0],  # Sector 1 (Agriculture)
+    [300.0, 400.0]   # Sector 2 (Industry)
+])
+
+target_row_sums = np.array([330.0, 770.0]) # Target Gross Intermediate Output
+target_col_sums = np.array([420.0, 680.0]) # Target Intermediate Input Consumption
+
+# TODO: 1. Row Scaling Step (r = target_row_sums / current_row_sums)
+# TODO: 2. Multiply each row i of A by r[i]
+# TODO: 3. Column Scaling Step (s = target_col_sums / current_col_sums)
+# TODO: 4. Multiply each col j of A by s[j]
+
+# --- WRITE YOUR PYTHON CODE BELOW ---
+
+
+
+print("═══════════════════════════════════════════════════")
+print("   SUT 2008 RAS BALANCED INTERMEDIATE MATRIX       ")
+print("═══════════════════════════════════════════════════")
+print("Balanced Matrix A1:")
+print(A)
+print(f"Resulting Row Sums : {A.sum(axis=1)}")
+print(f"Resulting Col Sums : {A.sum(axis=0)}")
+`,
+    solutionCode: `# UN SNA 2008 National Accounts Lab: SUT Matrix Balancing (RAS)
+import numpy as np
+
+A = np.array([
+    [100.0, 200.0],
+    [300.0, 400.0]
+])
+
+target_row_sums = np.array([330.0, 770.0])
+target_col_sums = np.array([420.0, 680.0])
+
+# Row scaling
+current_row_sums = A.sum(axis=1)
+r = target_row_sums / current_row_sums
+A = A * r[:, np.newaxis]
+
+# Col scaling
+current_col_sums = A.sum(axis=0)
+s = target_col_sums / current_col_sums
+A = A * s[np.newaxis, :]
+
+print("═══════════════════════════════════════════════════")
+print("   SUT 2008 RAS BALANCED INTERMEDIATE MATRIX       ")
+print("═══════════════════════════════════════════════════")
+print("Balanced Matrix A1:")
+print(np.round(A, 2))
+print(f"Resulting Row Sums : {np.round(A.sum(axis=1), 2)}")
+print(f"Resulting Col Sums : {np.round(A.sum(axis=0), 2)}")
+`,
+    solutionHint: "Multiply A by (target_row / row_sums)[:, None] then by (target_col / col_sums)[None, :].",
+    sampleData: `Sector,Industry_1,Industry_2,Target_Output
+Sector_1 (Agri),100.00,200.00,330.00
+Sector_2 (Ind),300.00,400.00,770.00
+Target_Input,420.00,680.00,1100.00`,
+  },
+  {
+    id: "lab-ufs-geospatial",
+    title: "Urban Frame Survey (UFS) Geospatial Block Sampling",
+    domain: "Geospatial Frame & Statistical Tools",
+    language: "python",
+    difficulty: "Intermediate",
+    instructions: "Write a script to compute household density per hectare for Urban Frame Survey (UFS) blocks and classify blocks into Sampling Strata based on density thresholds.",
+    initialCode: `# UFS Geospatial Division Lab: Block Density Stratification
+# Problem: Classify urban blocks based on household density (households / area_hectares).
+# Stratum A (High Density): Density >= 120 hh/ha
+# Stratum B (Medium Density): 60 <= Density < 120 hh/ha
+# Stratum C (Low Density): Density < 60 hh/ha
+
+ufs_blocks = [
+    {"town": "Pune", "block_id": "UFS-27-0101", "households": 280, "area_ha": 1.8},
+    {"town": "Pune", "block_id": "UFS-27-0102", "households": 150, "area_ha": 2.1},
+    {"town": "Pune", "block_id": "UFS-27-0103", "households": 85,  "area_ha": 2.5},
+    {"town": "Pune", "block_id": "UFS-27-0104", "households": 340, "area_ha": 2.0},
+]
+
+stratified_summary = {"Stratum A (High)": 0, "Stratum B (Medium)": 0, "Stratum C (Low)": 0}
+
+# TODO: 1. Loop through ufs_blocks and calculate density = b["households"] / b["area_ha"]
+# TODO: 2. Assign stratum category according to thresholds
+# TODO: 3. Count total blocks in stratified_summary
+
+# --- WRITE YOUR PYTHON CODE BELOW ---
+
+
+
+print("═══════════════════════════════════════════════════")
+print("  URBAN FRAME SURVEY (UFS) STRATIFICATION REPORT   ")
+print("═══════════════════════════════════════════════════")
+for st, count in stratified_summary.items():
+    print(f"• {st:25s}: {count} blocks")
+`,
+    solutionCode: `# UFS Geospatial Division Lab: Block Density Stratification
+ufs_blocks = [
+    {"town": "Pune", "block_id": "UFS-27-0101", "households": 280, "area_ha": 1.8},
+    {"town": "Pune", "block_id": "UFS-27-0102", "households": 150, "area_ha": 2.1},
+    {"town": "Pune", "block_id": "UFS-27-0103", "households": 85,  "area_ha": 2.5},
+    {"town": "Pune", "block_id": "UFS-27-0104", "households": 340, "area_ha": 2.0},
+]
+
+stratified_summary = {"Stratum A (High)": 0, "Stratum B (Medium)": 0, "Stratum C (Low)": 0}
+
+for b in ufs_blocks:
+    density = b["households"] / b["area_ha"]
+    if density >= 120:
+        st = "Stratum A (High)"
+    elif density >= 60:
+        st = "Stratum B (Medium)"
+    else:
+        st = "Stratum C (Low)"
+    stratified_summary[st] += 1
+    print(f"Block {b['block_id']}: Density {density:.1f} hh/ha ➔ {st}")
+
+print("═══════════════════════════════════════════════════")
+print("  URBAN FRAME SURVEY (UFS) STRATIFICATION REPORT   ")
+print("═══════════════════════════════════════════════════")
+for st, count in stratified_summary.items():
+    print(f"• {st:25s}: {count} blocks")
+`,
+    solutionHint: "Compute density = households / area_ha and check conditions for >= 120, >= 60, or < 60.",
+    sampleData: `Town_Name,UFS_Block_ID,Households,Area_Hectares
+Pune,UFS-27-0101,280,1.80
+Pune,UFS-27-0102,150,2.10
+Pune,UFS-27-0103,85,2.50
+Pune,UFS-27-0104,340,2.00`,
+  },
 ];
 
 export function LiveTerminalModal({
