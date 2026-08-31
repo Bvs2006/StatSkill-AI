@@ -717,6 +717,8 @@ export function LiveTerminalModal({
   const [selectedEx, setSelectedEx] = useState<LabExercise>(OFFICIAL_LAB_EXERCISES[0]);
   const [activeTab, setActiveTab] = useState<"terminal" | "dataset" | "solution">("terminal");
   const [mobilePane, setMobilePane] = useState<"editor" | "output">("editor");
+  const [showSolution, setShowSolution] = useState<boolean>(false);
+  const [verifiedSuccess, setVerifiedSuccess] = useState<boolean | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -724,10 +726,14 @@ export function LiveTerminalModal({
       setSelectedEx(exercise);
       setCode(exercise.initialCode);
       setResult(null);
+      setVerifiedSuccess(null);
+      setShowSolution(false);
     } else {
       setSelectedEx(OFFICIAL_LAB_EXERCISES[0]);
       setCode(OFFICIAL_LAB_EXERCISES[0].initialCode);
       setResult(null);
+      setVerifiedSuccess(null);
+      setShowSolution(false);
     }
     setActiveTab("terminal");
     setMobilePane("editor");
@@ -735,11 +741,43 @@ export function LiveTerminalModal({
 
   if (!isOpen) return null;
 
+  function checkStatisticalVerification(exId: string, stdout: string): boolean {
+    if (!stdout || stdout.trim().length === 0) return false;
+    const clean = stdout.toLowerCase().replace(/[, ]/g, "");
+
+    switch (exId) {
+      case "lab-cpi":
+        return clean.includes("117.2") || clean.includes("117.3") || clean.includes("17.2") || clean.includes("17.3");
+      case "lab-plfs-weights":
+        return clean.includes("3837500") || (clean.includes("punjab") && clean.includes("1200000"));
+      case "lab-sql-census":
+        return clean.includes("urban") && (clean.includes("food") || clean.includes("housing") || clean.includes("188.4"));
+      case "lab-gva-rebase":
+        return clean.includes("10345174") || clean.includes("10345175") || clean.includes("146.9") || clean.includes("147.0");
+      case "lab-dpdp-k-anonymity":
+        return (clean.includes("k=3") || clean.includes("k:3") || clean.includes("compliant(approved)")) && !clean.includes("k=0") && !clean.includes("k:0");
+      case "lab-wpi-jevons":
+        return (clean.includes("116.1") || clean.includes("116.2")) && !clean.includes("0.00");
+      case "lab-plfs-rates":
+        return clean.includes("52.00%") || clean.includes("49.00%") || clean.includes("5.77%");
+      case "lab-asi-sql":
+        return clean.includes("mah") || clean.includes("guj") || clean.includes("total_inputs") || clean.includes("2800");
+      case "lab-sut-ras":
+        return clean.includes("330") && clean.includes("770") && clean.includes("420");
+      case "lab-ufs-geospatial":
+        return clean.includes("stratum a") && (clean.includes("2 blocks") || clean.includes("density"));
+      default:
+        return stdout.length > 30 && !stdout.includes("0.00") && !stdout.includes("0 persons");
+    }
+  }
+
   async function handleRun() {
     setRunning(true);
     setResult(null);
+    setVerifiedSuccess(null);
     setActiveTab("terminal");
     setMobilePane("output");
+
     try {
       let res: ExecutionResult;
       if (selectedEx.language === "python") {
@@ -748,29 +786,33 @@ export function LiveTerminalModal({
         res = await runSqlQuery(code);
       }
       setResult(res);
-      
+
       if (res.success) {
-        // Map domains to competencies for demo purposes
-        const compMapping: Record<string, string> = {
-          "Official Statistics & Price Indices": "Price Statistics (CPI / WPI)",
-          "Survey Sampling & PLFS": "Sampling Theory & PPS",
-          "Database Management & Big Data": "SQL & Database Querying",
-          "National Accounts & SDC Aggregates": "National Accounts & GVA",
-          "Data Privacy & SDC Governance": "Data Privacy (DPDP Act)",
-        };
-        const competencyName = compMapping[selectedEx.domain] || "Python for Data Analysis";
+        const isVerified = checkStatisticalVerification(selectedEx.id, res.stdout);
+        setVerifiedSuccess(isVerified);
 
-        applyClosedLoopCompetencyUpdate({
-          competencyName,
-          scorePct: 100, // Lab success counts as full points
-          evidence: `Virtual Lab Completed: ${selectedEx.title}`,
-        });
+        if (isVerified) {
+          const compMapping: Record<string, string> = {
+            "Official Statistics & Price Indices": "Price Statistics (CPI / WPI)",
+            "Survey Sampling & PLFS": "Sampling Theory & PPS",
+            "Database Management & Big Data": "SQL & Database Querying",
+            "National Accounts & SDC Aggregates": "National Accounts & GVA",
+            "Data Privacy & SDC Governance": "Data Privacy (DPDP Act)",
+            "Geospatial Frame & Statistical Tools": "Geospatial Data Processing",
+          };
+          const competencyName = compMapping[selectedEx.domain] || "Python for Data Analysis";
 
-        // Add to completed list
-        const completed = JSON.parse(localStorage.getItem("statskill_completed_labs") || "[]");
-        if (!completed.includes(selectedEx.id)) {
-          completed.push(selectedEx.id);
-          localStorage.setItem("statskill_completed_labs", JSON.stringify(completed));
+          applyClosedLoopCompetencyUpdate({
+            competencyName,
+            scorePct: 100,
+            evidence: `Virtual Lab Solved & Verified: ${selectedEx.title}`,
+          });
+
+          const completed = JSON.parse(localStorage.getItem("statskill_completed_labs") || "[]");
+          if (!completed.includes(selectedEx.id)) {
+            completed.push(selectedEx.id);
+            localStorage.setItem("statskill_completed_labs", JSON.stringify(completed));
+          }
         }
       }
     } catch (e: any) {
@@ -780,6 +822,7 @@ export function LiveTerminalModal({
         executionTimeMs: 0,
         success: false,
       });
+      setVerifiedSuccess(false);
     } finally {
       setRunning(false);
     }
@@ -789,6 +832,8 @@ export function LiveTerminalModal({
     setSelectedEx(ex);
     setCode(ex.initialCode);
     setResult(null);
+    setVerifiedSuccess(null);
+    setShowSolution(false);
     setActiveTab("terminal");
     setMobilePane("editor");
   }
@@ -834,7 +879,7 @@ export function LiveTerminalModal({
             </div>
           </div>
 
-          {/* Mobile Pane Switcher (Code vs Output) */}
+          {/* Mobile Pane Switcher */}
           <div className="flex lg:hidden bg-[#1E2430] p-0.5 rounded-lg border border-gray-700 text-[11px] font-bold">
             <button
               onClick={() => setMobilePane("editor")}
@@ -886,7 +931,7 @@ export function LiveTerminalModal({
 
         {/* Middle Body */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 min-h-0 divide-y lg:divide-y-0 lg:divide-x divide-gray-800">
-          {/* Left: Code Editor (shown always on lg:, and on mobile when mobilePane === 'editor') */}
+          {/* Left: Code Editor */}
           <div className={`flex flex-col h-full bg-[#161B22] ${mobilePane !== "editor" ? "hidden lg:flex" : "flex"}`}>
             <div className="px-3 sm:px-4 py-2 bg-[#12161E] border-b border-gray-800 flex items-center justify-between text-xs text-gray-400 flex-wrap gap-1.5">
               <div className="flex items-center gap-2">
@@ -895,20 +940,18 @@ export function LiveTerminalModal({
                 </span>
                 <span className="text-[10px] text-gray-500 font-mono hidden sm:inline">(Ctrl+Enter to Run)</span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-3">
                 <button
-                  onClick={() => setCode(selectedEx.initialCode)}
-                  className="hover:text-gray-200 text-[10px] sm:text-[11px] font-mono text-gray-400 hover:underline cursor-pointer"
-                  title="Reset to starter challenge code"
+                  onClick={() => {
+                    setCode(selectedEx.initialCode);
+                    setResult(null);
+                    setVerifiedSuccess(null);
+                  }}
+                  className="hover:text-amber-300 text-[10px] sm:text-[11px] font-mono text-gray-400 hover:underline cursor-pointer flex items-center gap-1"
+                  title="Reset to challenge starter code"
                 >
-                  Reset ↺
-                </button>
-                <button
-                  onClick={() => setCode(selectedEx.solutionCode)}
-                  className="hover:text-amber-300 text-[10px] sm:text-[11px] font-mono text-amber-400/90 hover:underline cursor-pointer"
-                  title="Load reference solution into editor"
-                >
-                  💡 Solution
+                  <span>↺</span>
+                  <span>Reset Starter</span>
                 </button>
                 <button
                   onClick={() => setCode("")}
@@ -925,12 +968,12 @@ export function LiveTerminalModal({
               onChange={(e) => setCode(e.target.value)}
               onKeyDown={handleKeyDown}
               spellCheck={false}
-              placeholder="Write your Python/SQL code here..."
+              placeholder="Write your Python/SQL statistical calculation code here..."
               className="flex-1 w-full p-3 sm:p-4 bg-transparent text-gray-100 font-mono text-xs leading-relaxed resize-none focus:outline-none selection:bg-[#0B3D66]"
             />
           </div>
 
-          {/* Right: Tabbed Output Console & Inspector (shown always on lg:, and on mobile when mobilePane === 'output') */}
+          {/* Right: Tabbed Output Console & Inspector */}
           <div className={`flex flex-col h-full bg-[#0F131A] ${mobilePane !== "output" ? "hidden lg:flex" : "flex"}`}>
             {/* Lab Objective Bar */}
             <div className="p-3.5 bg-[#141821] border-b border-gray-800 flex items-center justify-between">
@@ -962,7 +1005,7 @@ export function LiveTerminalModal({
                     : "border-transparent text-gray-400 hover:text-gray-200"
                 }`}
               >
-                📊 Sample Dataset (CSV)
+                📊 Sample Microdata
               </button>
               <button
                 onClick={() => setActiveTab("solution")}
@@ -972,7 +1015,7 @@ export function LiveTerminalModal({
                     : "border-transparent text-gray-400 hover:text-gray-200"
                 }`}
               >
-                💡 Solution &amp; Method
+                💡 Solution &amp; Hint
               </button>
             </div>
 
@@ -1011,8 +1054,11 @@ export function LiveTerminalModal({
                   </div>
 
                   {!result && !running && (
-                    <div className="text-gray-500 italic py-6 text-center">
-                      Write your solution on the left, then click <strong className="text-[#FF7A00]">"▶ Run Code"</strong> or press <strong className="text-white">Ctrl+Enter</strong> to execute.
+                    <div className="text-gray-500 italic py-6 text-center space-y-2">
+                      <div className="text-sm font-sans font-semibold text-gray-400">Complete the calculation tasks in the editor</div>
+                      <div className="text-xs">
+                        Write your code on the left, then click <strong className="text-[#FF7A00]">"▶ Run Code"</strong> or press <strong className="text-white">Ctrl+Enter</strong>.
+                      </div>
                     </div>
                   )}
 
@@ -1024,7 +1070,30 @@ export function LiveTerminalModal({
                   )}
 
                   {result && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
+                      {/* Verification Banner */}
+                      {verifiedSuccess === true && (
+                        <div className="p-3 bg-emerald-950/60 border border-emerald-500/60 rounded-xl text-emerald-200 font-sans space-y-1">
+                          <div className="font-bold flex items-center gap-1.5 text-xs text-emerald-300">
+                            <span>✅ Official Verification Passed</span>
+                          </div>
+                          <p className="text-[11px] text-emerald-100/90 leading-relaxed">
+                            Calculations match official MoSPI cadre benchmarks. Closed-loop competency level elevated!
+                          </p>
+                        </div>
+                      )}
+
+                      {verifiedSuccess === false && result.success && (
+                        <div className="p-3 bg-amber-950/60 border border-amber-500/60 rounded-xl text-amber-200 font-sans space-y-1">
+                          <div className="font-bold flex items-center gap-1.5 text-xs text-amber-300">
+                            <span>⚠️ Verification Incomplete</span>
+                          </div>
+                          <p className="text-[11px] text-amber-100/90 leading-relaxed">
+                            Script executed, but calculations appear incomplete or uncalculated. Please complete the TODO items in your code.
+                          </p>
+                        </div>
+                      )}
+
                       {result.stdout && (
                         <pre className="text-emerald-300 whitespace-pre-wrap leading-relaxed bg-[#0A0D14] p-3.5 rounded-xl border border-gray-800 shadow-inner">
                           {result.stdout}
@@ -1052,31 +1121,57 @@ export function LiveTerminalModal({
               )}
 
               {activeTab === "solution" && (
-                <div className="space-y-3 font-sans">
+                <div className="space-y-4 font-sans">
+                  {/* Hint Box */}
                   <div className="bg-blue-950/40 border border-blue-800/80 p-4 rounded-xl text-blue-200 text-xs leading-relaxed space-y-2">
-                    <strong className="text-white block mb-1">📐 Statistical Theory &amp; Methodology:</strong>
+                    <strong className="text-white block mb-1">📐 Statistical Theory &amp; Formula Guide:</strong>
                     <p>{selectedEx.solutionHint}</p>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-gray-300 font-bold">Reference Implementation:</span>
+                  {/* Hidden Solution Section */}
+                  {!showSolution ? (
+                    <div className="p-6 bg-[#141923] rounded-2xl border border-gray-800 text-center space-y-3">
+                      <div className="text-2xl">🔒</div>
+                      <div className="text-xs font-bold text-gray-300">Reference Solution is Hidden</div>
+                      <p className="text-[11px] text-gray-500 max-w-sm mx-auto">
+                        Try solving the exercise independently first to practice cadre competencies.
+                      </p>
                       <button
-                        onClick={() => {
-                          setCode(selectedEx.solutionCode);
-                          setActiveTab("terminal");
-                        }}
-                        className="px-2.5 py-1 rounded bg-[#FF7A00] hover:bg-[#e06a00] text-white text-[11px] font-bold cursor-pointer transition-colors"
+                        onClick={() => setShowSolution(true)}
+                        className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
                       >
-                        Load into Editor ➔
+                        👁️ Reveal Reference Solution
                       </button>
                     </div>
-                    <pre className="text-emerald-300 whitespace-pre-wrap bg-[#0A0D14] p-3.5 rounded-xl border border-gray-800 text-[11px] font-mono leading-relaxed overflow-x-auto">
-                      {selectedEx.solutionCode}
-                    </pre>
-                  </div>
+                  ) : (
+                    <div className="space-y-2 animate-in fade-in duration-300">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-amber-300 font-bold">Reference Implementation:</span>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setCode(selectedEx.solutionCode);
+                              setActiveTab("terminal");
+                            }}
+                            className="px-2.5 py-1 rounded bg-[#FF7A00] hover:bg-[#e06a00] text-white text-[10px] font-bold cursor-pointer transition-colors"
+                          >
+                            Paste into Editor ➔
+                          </button>
+                          <button
+                            onClick={() => setShowSolution(false)}
+                            className="px-2 py-1 rounded bg-gray-800 hover:bg-gray-700 text-gray-400 text-[10px] cursor-pointer"
+                          >
+                            Hide 🔒
+                          </button>
+                        </div>
+                      </div>
+                      <pre className="text-emerald-300 whitespace-pre-wrap bg-[#0A0D14] p-3.5 rounded-xl border border-gray-800 text-[11px] font-mono leading-relaxed overflow-x-auto">
+                        {selectedEx.solutionCode}
+                      </pre>
+                    </div>
+                  )}
 
-                  <div className="text-[11px] text-gray-400 leading-relaxed">
+                  <div className="text-[11px] text-gray-500 leading-relaxed">
                     Official Reference: National Statistical Systems Training Academy (NSSTA) Practical Guide on Survey Data Analysis &amp; Microdata Deflation.
                   </div>
                 </div>
