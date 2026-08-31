@@ -4363,14 +4363,14 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
 
               {/* Message Content */}
               <div
-                className={`p-4 rounded-3xl shadow-xs relative group ${
+                className={`p-4 sm:p-5 rounded-3xl shadow-xs relative group ${
                   m.role === "user"
-                    ? "bg-[#0B3D66] text-white rounded-tr-none whitespace-pre-line"
-                    : "bg-white text-gray-800 border border-gray-200 rounded-tl-none w-full"
+                    ? "bg-gradient-to-br from-[#0B3D66] to-[#062038] text-white rounded-tr-xs whitespace-pre-line"
+                    : "bg-white text-gray-900 border border-gray-200/80 rounded-tl-xs w-full shadow-2xs"
                 }`}
               >
                 {m.role === "user" ? (
-                  <div className="text-xs font-medium">{m.text}</div>
+                  <div className="text-xs font-medium leading-relaxed">{m.text}</div>
                 ) : (
                   <>
                     <AIResponseMessage
@@ -4378,15 +4378,35 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
                       onNav={onNav}
                       onElevate={handleQuickElevate}
                     />
-                    <div className="pt-2 mt-2 border-t border-gray-100 flex justify-between items-center text-[10px] text-gray-400">
-                      <span>StatSkill Official Advisory</span>
-                      <button
-                        onClick={() => speakMessage(m.text)}
-                        className="p-1 hover:text-[#0B3D66] rounded cursor-pointer transition-colors"
-                        title="Read out loud with text-to-speech"
-                      >
-                        🔊 Listen
-                      </button>
+                    <div className="pt-2.5 mt-3 border-t border-gray-100 flex justify-between items-center text-[10px] text-gray-400">
+                      <span className="flex items-center gap-1 text-[#0B3D66] font-semibold">
+                        <span>🏛️</span>
+                        <span>StatSkill AI Verified Capacity Advisory</span>
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (navigator.clipboard) {
+                              navigator.clipboard.writeText(m.text);
+                            }
+                          }}
+                          className="hover:text-[#0B3D66] cursor-pointer transition-colors flex items-center gap-1"
+                          title="Copy response text"
+                        >
+                          <span>📋</span>
+                          <span>Copy</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => speakMessage(m.text)}
+                          className="hover:text-[#0B3D66] cursor-pointer transition-colors flex items-center gap-1"
+                          title="Read out loud with text-to-speech"
+                        >
+                          <span>🔊</span>
+                          <span>Listen</span>
+                        </button>
+                      </div>
                     </div>
                   </>
                 )}
