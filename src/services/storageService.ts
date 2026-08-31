@@ -1638,12 +1638,64 @@ export function deleteAdminEmployee(id: string): void {
   saveAdminEmployees(current.filter((e) => e.id !== id));
 }
 
+const DEFAULT_INITIAL_NOTIFICATIONS: NotificationItem[] = [
+  { id: "n1", title: "New Course Recommended", message: "Python for Data Analysis was added to your path based on your role gap.", timestamp: "10 mins ago", read: false, type: "recommendation" },
+  { id: "n2", title: "Competency Elevated", message: "Your Sampling competency increased from Level 2 to Level 3.", timestamp: "2 hours ago", read: false, type: "competency_update" },
+  { id: "n3", title: "NSSTA TPAC Programme Open", message: "Residential workshop on National Accounts scheduled for July 2026.", timestamp: "1 day ago", read: true, type: "programme_alert" },
+];
+
 export function getNotifications(): NotificationItem[] {
-  return [
-    { id: "n1", title: "New Course Recommended", message: "Python for Data Analysis was added to your path based on your role gap.", timestamp: "10 mins ago", read: false, type: "recommendation" },
-    { id: "n2", title: "Competency Elevated", message: "Your Sampling competency increased from Level 2 to Level 3.", timestamp: "2 hours ago", read: false, type: "competency_update" },
-    { id: "n3", title: "NSSTA TPAC Programme Open", message: "Residential workshop on National Accounts scheduled for July 2026.", timestamp: "1 day ago", read: true, type: "programme_alert" },
-  ];
+  if (typeof window === "undefined") return DEFAULT_INITIAL_NOTIFICATIONS;
+  const stored = localStorage.getItem(STORAGE_KEYS.NOTIFICATIONS);
+  if (stored) {
+    try {
+      return JSON.parse(stored);
+    } catch {}
+  }
+  return DEFAULT_INITIAL_NOTIFICATIONS;
+}
+
+export function saveNotifications(notifs: NotificationItem[]): void {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(STORAGE_KEYS.NOTIFICATIONS, JSON.stringify(notifs));
+}
+
+export function addNotification(params: {
+  title: string;
+  message: string;
+  type: "competency_update" | "recommendation" | "programme_alert" | "assessment_reminder";
+}): NotificationItem {
+  const notifs = getNotifications();
+  const newNotif: NotificationItem = {
+    id: `notif-${Date.now()}`,
+    title: params.title,
+    message: params.message,
+    timestamp: "Just now",
+    read: false,
+    type: params.type,
+  };
+  notifs.unshift(newNotif);
+  saveNotifications(notifs);
+  return newNotif;
+}
+
+export function markNotificationRead(id: string): void {
+  const notifs = getNotifications();
+  const target = notifs.find((n) => n.id === id);
+  if (target) {
+    target.read = true;
+    saveNotifications(notifs);
+  }
+}
+
+export function markAllNotificationsRead(): void {
+  const notifs = getNotifications();
+  notifs.forEach((n) => (n.read = true));
+  saveNotifications(notifs);
+}
+
+export function clearNotifications(): void {
+  saveNotifications([]);
 }
 
 export function getQuizAttempts(): QuizAttempt[] {
@@ -1736,6 +1788,12 @@ export function applyClosedLoopCompetencyUpdate(params: {
       quizScorePct: params.scorePct,
     });
 
+    addNotification({
+      title: "Competency Elevated 🎉",
+      message: `Your "${params.competencyName}" competency elevated from Level ${oldLevel} to Level ${target.currentLevel}! Skill gap reduced to ${target.gap}.`,
+      type: "competency_update",
+    });
+
     return {
       updated: true,
       oldLevel,
@@ -1748,7 +1806,7 @@ export function applyClosedLoopCompetencyUpdate(params: {
     updated: false,
     oldLevel,
     newLevel: oldLevel,
-    message: `Assessment score of ${params.scorePct}% recorded. Score was below threshold for Level ${oldLevel + 1} elevation. Weak areas flagged for revision.`,
+    message: `Assessment score of ${params.scorePct}% recorded. Score was below the 80% mastery threshold required for level elevation.`,
   };
 }
 

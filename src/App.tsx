@@ -52,6 +52,11 @@ import {
   updateAdminEmployee,
   deleteAdminEmployee,
   getNotifications,
+  saveNotifications,
+  addNotification,
+  markNotificationRead,
+  markAllNotificationsRead,
+  clearNotifications,
   getQuizAttempts,
   saveQuizAttempt,
   getCompetencyAuditLogs,
@@ -74,6 +79,7 @@ import {
   type VerifiableCertificate,
 } from "./services/storageService";
 
+import { DashboardMicroBot } from "./components/DashboardMicroBot";
 import { getRichCourseDetail } from "./services/courseContentData";
 import { generateOfficialDataset, triggerBrowserDownload } from "./services/fileDownloadService";
 
@@ -404,7 +410,33 @@ function Topbar({
   const profile = getProfile();
   const [igotModalOpen, setIgotModalOpen] = useState(false);
   const [notifsOpen, setNotifsOpen] = useState(false);
-  const notifs = getNotifications();
+  const [notifs, setNotifs] = useState<NotificationItem[]>(() => getNotifications());
+
+  const unreadCount = notifs.filter((n) => !n.read).length;
+
+  const refreshNotifs = () => {
+    setNotifs(getNotifications());
+  };
+
+  const handleMarkAll = () => {
+    markAllNotificationsRead();
+    refreshNotifs();
+  };
+
+  const handleClear = () => {
+    clearNotifications();
+    refreshNotifs();
+  };
+
+  const handleItemClick = (n: NotificationItem) => {
+    markNotificationRead(n.id);
+    refreshNotifs();
+    setNotifsOpen(false);
+    if (n.type === "competency_update") onNav("skills");
+    else if (n.type === "recommendation") onNav("courses");
+    else if (n.type === "programme_alert") onNav("training_programmes");
+    else onNav("dashboard");
+  };
 
   return (
     <header className="h-14 bg-white border-b border-gray-100 flex items-center px-3 sm:px-4 md:px-6 gap-2 sm:gap-3 shrink-0 relative z-20 justify-between">
@@ -470,7 +502,6 @@ function Topbar({
           </button>
         </div>
 
-
         {/* iGOT Adapter Status Badge */}
         <button
           onClick={() => setIgotModalOpen(true)}
@@ -481,33 +512,89 @@ function Topbar({
           <span>iGOT Synced</span>
         </button>
 
-        {/* Notifications Button */}
+        {/* Notifications Button & Dropdown */}
         <div className="relative shrink-0">
           <button
-            onClick={() => setNotifsOpen(!notifsOpen)}
-            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 flex items-center justify-center text-xs relative cursor-pointer"
+            onClick={() => {
+              refreshNotifs();
+              setNotifsOpen(!notifsOpen);
+            }}
+            className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 flex items-center justify-center text-xs relative cursor-pointer transition-colors shadow-2xs"
             title="Notifications"
           >
             🔔
-            {notifs.some((n) => !n.read) && (
-              <span className="w-2 h-2 rounded-full bg-rose-500 absolute top-1 right-1" />
+            {unreadCount > 0 && (
+              <span className="min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-extrabold flex items-center justify-center absolute -top-1 -right-1 shadow-2xs">
+                {unreadCount}
+              </span>
             )}
           </button>
 
           {notifsOpen && (
-            <div className="fixed sm:absolute top-14 sm:top-full right-2 sm:right-0 mt-2 w-[calc(100vw-1rem)] sm:w-72 max-w-sm bg-white rounded-2xl shadow-xl border border-gray-100 p-3 space-y-2 z-50 text-xs animate-in zoom-in-95">
-              <div className="flex justify-between font-bold text-gray-800 pb-1 border-b border-gray-100">
-                <span>Notifications</span>
-                <span className="text-[10px] text-gray-400">3 Alerts</span>
+            <div className="fixed sm:absolute top-14 sm:top-full right-2 sm:right-0 mt-2 w-[calc(100vw-1rem)] sm:w-80 max-w-sm bg-white rounded-3xl shadow-2xl border border-gray-100 p-4 space-y-3 z-50 text-xs animate-in zoom-in-95">
+              <div className="flex justify-between items-center pb-2 border-b border-gray-100">
+                <div className="flex items-center gap-1.5 font-bold text-gray-900">
+                  <span>Notifications</span>
+                  <span className="text-[10px] bg-blue-100 text-blue-900 px-2 py-0.5 rounded-full">
+                    {unreadCount} new
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-[10px]">
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAll}
+                      className="text-blue-600 font-bold hover:underline cursor-pointer"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                  <button
+                    onClick={handleClear}
+                    className="text-gray-400 hover:text-rose-600 cursor-pointer"
+                  >
+                    Clear
+                  </button>
+                </div>
               </div>
-              <div className="space-y-2 max-h-56 overflow-y-auto">
-                {notifs.map((n) => (
-                  <div key={n.id} className="p-2 bg-gray-50 rounded-xl space-y-0.5">
-                    <div className="font-bold text-[#0B3D66] text-[11px]">{n.title}</div>
-                    <div className="text-[10px] text-gray-600 leading-tight">{n.message}</div>
-                    <div className="text-[9px] text-gray-400">{n.timestamp}</div>
+
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {notifs.length > 0 ? (
+                  notifs.map((n) => (
+                    <div
+                      key={n.id}
+                      onClick={() => handleItemClick(n)}
+                      className={`p-3 rounded-2xl border transition-all cursor-pointer space-y-1 ${
+                        !n.read
+                          ? "bg-blue-50/50 border-blue-200/80 hover:bg-blue-100/50 shadow-2xs"
+                          : "bg-gray-50/60 border-gray-100 hover:bg-gray-100/60"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-1">
+                        <div className="font-bold text-[#0B3D66] text-xs flex items-center gap-1.5">
+                          <span>
+                            {n.type === "competency_update"
+                              ? "🎉"
+                              : n.type === "recommendation"
+                              ? "📚"
+                              : n.type === "programme_alert"
+                              ? "🏛️"
+                              : "✍️"}
+                          </span>
+                          <span className="line-clamp-1">{n.title}</span>
+                        </div>
+                        {!n.read && (
+                          <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0" />
+                        )}
+                      </div>
+                      <div className="text-[11px] text-gray-600 leading-snug">{n.message}</div>
+                      <div className="text-[9px] text-gray-400 font-mono">{n.timestamp}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="py-6 text-center text-gray-400 text-xs">
+                    No new alerts or notifications.
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
@@ -1872,6 +1959,14 @@ function DashboardScreen({
           </div>
         ))}
       </div>
+
+      {/* Rapid AI Closed-Loop Micro-Bot Widget */}
+      <DashboardMicroBot
+        onNav={onNav}
+        onRefreshCompetencies={() => {
+          // Triggers re-render of competencies across dashboard
+        }}
+      />
 
       {/* Radar & Priority Gaps */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
