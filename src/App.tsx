@@ -97,7 +97,15 @@ import {
 
 import { semanticSearchCourses } from "./services/sentenceTransformer";
 import { extractTextFromFile } from "./services/documentParser";
-import { LiveTerminalModal, OFFICIAL_LAB_EXERCISES, type LabExercise } from "./components/LiveTerminal";
+import {
+  LiveTerminalModal,
+  OFFICIAL_LAB_EXERCISES,
+  getCustomTrainerLabs,
+  saveCustomTrainerLab,
+  deleteCustomTrainerLab,
+  getAllAvailableLabs,
+  type LabExercise,
+} from "./components/LiveTerminal";
 import { LecturePlayer } from "./components/LecturePlayer";
 import {
   IgotAdapter,
@@ -5103,23 +5111,28 @@ function CertificatesScreen() {
 
 function VirtualLabsScreen() {
   const { t, lang } = useLanguage();
+  const [labsList, setLabsList] = useState<LabExercise[]>(getAllAvailableLabs());
   const [selectedLab, setSelectedLab] = useState<LabExercise | null>(null);
   const [selectedDomain, setSelectedDomain] = useState<string>("all");
   const [selectedLanguage, setSelectedLanguage] = useState<string>("all");
   const [selectedDifficulty, setSelectedDifficulty] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  useEffect(() => {
+    setLabsList(getAllAvailableLabs());
+  }, []);
+
   const domainTabs = [
-    { id: "all", label: lang === "HI" ? "सभी सैंडबॉक्स" : lang === "TE" ? "అన్ని ల్యాబ్‌లు" : "All Sandboxes", count: OFFICIAL_LAB_EXERCISES.length, icon: "🧪" },
-    { id: "price", label: lang === "HI" ? "मूल्य सांख्यिकी (CPI/WPI)" : lang === "TE" ? "ధరల గణాంకాలు (CPI/WPI)" : "Price Statistics (CPI/WPI)", count: 2, icon: "🏷️" },
-    { id: "survey", label: lang === "HI" ? "सर्वेक्षण एवं पीएलएफएस" : lang === "TE" ? "సర్వే & PLFS" : "Survey & PLFS", count: 2, icon: "📋" },
-    { id: "accounts", label: lang === "HI" ? "राष्ट्रीय लेखा (GVA/SUT)" : lang === "TE" ? "జాతీయ ఖాతాలు (GVA/SUT)" : "National Accounts (GVA/SUT)", count: 2, icon: "📊" },
-    { id: "privacy", label: lang === "HI" ? "डेटा गोपनीयता (DPDP)" : lang === "TE" ? "డేటా గోప్యత (DPDP)" : "Data Privacy (DPDP)", count: 1, icon: "🔒" },
-    { id: "database", label: lang === "HI" ? "एसक्यूएल डेटाबेस (ASI)" : lang === "TE" ? "SQL డేటాబేస్ (ASI)" : "SQL Databases (ASI)", count: 2, icon: "💾" },
-    { id: "geospatial", label: lang === "HI" ? "भू-स्थानिक ढांचा (UFS)" : lang === "TE" ? "జియోస్పేషియల్ (UFS)" : "Geospatial (UFS)", count: 1, icon: "🗺️" },
+    { id: "all", label: lang === "HI" ? "सभी सैंडबॉक्स" : lang === "TE" ? "అన్ని ల్యాబ్‌లు" : "All Sandboxes", count: labsList.length, icon: "🧪" },
+    { id: "price", label: lang === "HI" ? "मूल्य सांख्यिकी (CPI/WPI)" : lang === "TE" ? "ధరల గణాంకాలు (CPI/WPI)" : "Price Statistics (CPI/WPI)", count: labsList.filter(l => l.domain.includes("Price") || l.id.includes("cpi") || l.id.includes("wpi")).length, icon: "🏷️" },
+    { id: "survey", label: lang === "HI" ? "सर्वेक्षण एवं पीएलएफएस" : lang === "TE" ? "సర్వే & PLFS" : "Survey & PLFS", count: labsList.filter(l => l.domain.includes("Sampling") || l.domain.includes("Survey") || l.id.includes("plfs")).length, icon: "📋" },
+    { id: "accounts", label: lang === "HI" ? "राष्ट्रीय लेखा (GVA/SUT)" : lang === "TE" ? "జాతీయ ఖాతాలు (GVA/SUT)" : "National Accounts (GVA/SUT)", count: labsList.filter(l => l.domain.includes("National") || l.id.includes("gva") || l.id.includes("sut")).length, icon: "📊" },
+    { id: "privacy", label: lang === "HI" ? "डेटा गोपनीयता (DPDP)" : lang === "TE" ? "డేటా గోప్యత (DPDP)" : "Data Privacy (DPDP)", count: labsList.filter(l => l.domain.includes("Privacy") || l.id.includes("dpdp")).length, icon: "🔒" },
+    { id: "database", label: lang === "HI" ? "एसक्यूएल डेटाबेस (ASI)" : lang === "TE" ? "SQL డేటాబేస్ (ASI)" : "SQL Databases (ASI)", count: labsList.filter(l => l.language === "sql" || l.domain.includes("Database") || l.id.includes("sql") || l.id.includes("asi")).length, icon: "💾" },
+    { id: "geospatial", label: lang === "HI" ? "भू-स्थानिक ढांचा (UFS)" : lang === "TE" ? "జియోస్పేషియల్ (UFS)" : "Geospatial (UFS)", count: labsList.filter(l => l.domain.includes("Geospatial") || l.id.includes("ufs")).length, icon: "🗺️" },
   ];
 
-  const filteredLabs = OFFICIAL_LAB_EXERCISES.filter((lab) => {
+  const filteredLabs = labsList.filter((lab) => {
     const matchesSearch =
       lab.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       lab.instructions.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -5127,12 +5140,12 @@ function VirtualLabsScreen() {
 
     const matchesDomain =
       selectedDomain === "all" ||
-      (selectedDomain === "price" && (lab.id === "lab-cpi" || lab.id === "lab-wpi-jevons")) ||
-      (selectedDomain === "survey" && (lab.id === "lab-plfs-weights" || lab.id === "lab-plfs-rates")) ||
-      (selectedDomain === "accounts" && (lab.id === "lab-gva-rebase" || lab.id === "lab-sut-ras")) ||
-      (selectedDomain === "privacy" && lab.id === "lab-dpdp-k-anonymity") ||
-      (selectedDomain === "database" && (lab.id === "lab-sql-census" || lab.id === "lab-asi-sql")) ||
-      (selectedDomain === "geospatial" && lab.id === "lab-ufs-geospatial");
+      (selectedDomain === "price" && (lab.domain.includes("Price") || lab.id.includes("cpi") || lab.id.includes("wpi"))) ||
+      (selectedDomain === "survey" && (lab.domain.includes("Sampling") || lab.domain.includes("Survey") || lab.id.includes("plfs"))) ||
+      (selectedDomain === "accounts" && (lab.domain.includes("National") || lab.id.includes("gva") || lab.id.includes("sut"))) ||
+      (selectedDomain === "privacy" && (lab.domain.includes("Privacy") || lab.id.includes("dpdp"))) ||
+      (selectedDomain === "database" && (lab.language === "sql" || lab.domain.includes("Database") || lab.id.includes("sql") || lab.id.includes("asi"))) ||
+      (selectedDomain === "geospatial" && (lab.domain.includes("Geospatial") || lab.id.includes("ufs")));
 
     const matchesLanguage = selectedLanguage === "all" || lab.language === selectedLanguage;
     const matchesDifficulty = selectedDifficulty === "all" || lab.difficulty === selectedDifficulty;
@@ -5177,7 +5190,7 @@ function VirtualLabsScreen() {
         {/* Quick Sandbox Stats */}
         <div className="relative z-10 flex md:flex-col items-center md:items-end gap-3 shrink-0">
           <div className="bg-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/20 text-right">
-            <div className="text-lg font-bold font-serif text-amber-300">{OFFICIAL_LAB_EXERCISES.length} Live Labs</div>
+            <div className="text-lg font-bold font-serif text-amber-300">{labsList.length} Live Labs</div>
             <div className="text-[10px] text-blue-200">Across 6 Cadre Disciplines</div>
           </div>
         </div>
@@ -5247,7 +5260,7 @@ function VirtualLabsScreen() {
             <option value="all">{lang === "HI" ? "सभी स्तर" : lang === "TE" ? "అన్ని స్థాయిలు" : "All Levels"}</option>
             <option value="Basic">{lang === "HI" ? "बुनियादी (Basic)" : lang === "TE" ? "ప్రాథమిక (Basic)" : "Basic"}</option>
             <option value="Intermediate">{lang === "HI" ? "मध्यवर्ती (Intermediate)" : lang === "TE" ? "మధ్యస్థ (Intermediate)" : "Intermediate"}</option>
-            <option value="Advanced">{lang === "HI" ? "उन्नत (Advanced)" : lang === "TE" ? "ఉన్నత (Advanced)" : "Advanced"}</option>
+            <option value="Advanced">{lang === "HI" ? "उन्नत (Advanced)" : lang === "TE" ? "ఉన్నत (Advanced)" : "Advanced"}</option>
           </select>
         </div>
       </div>
@@ -5256,22 +5269,29 @@ function VirtualLabsScreen() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredLabs.map((lab) => {
           const isPython = lab.language === "python";
+          const isCustom = lab.id.startsWith("lab-custom");
           return (
             <div
               key={lab.id}
               className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-lg hover:border-blue-200 transition-all space-y-4 flex flex-col justify-between group"
             >
               <div className="space-y-2.5">
-                <div className="flex justify-between items-center">
+                <div className="flex justify-between items-center flex-wrap gap-1.5">
                   <div className="flex items-center gap-1.5">
                     <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
                       isPython ? "bg-amber-100 text-amber-900 border border-amber-200" : "bg-blue-100 text-blue-900 border border-blue-200"
                     }`}>
                       {isPython ? "🐍 PYTHON 3.11" : "💾 SQLITE 3"}
                     </span>
-                    <span className="text-[9px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
-                      WASM
-                    </span>
+                    {isCustom ? (
+                      <span className="text-[9px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                        ⚡ Custom Lab
+                      </span>
+                    ) : (
+                      <span className="text-[9px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
+                        WASM
+                      </span>
+                    )}
                   </div>
 
                   <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
@@ -5341,7 +5361,9 @@ function VirtualLabsScreen() {
 // ──────────────────────────────────────────────
 
 function TrainerScreen() {
+  const [activeTrainerStudioTab, setActiveTrainerStudioTab] = useState<"mcqs" | "labs">("mcqs");
   const [bank, setBank] = useState<ValidatedMCQ[]>(getTrainerQuestionBank());
+  const [trainerLabs, setTrainerLabs] = useState<LabExercise[]>(getAllAvailableLabs());
   const [generating, setGenerating] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [competency, setCompetency] = useState("Python for Data Analysis");
@@ -5360,10 +5382,31 @@ function TrainerScreen() {
   const [difficulty, setDifficulty] = useState<"Basic" | "Intermediate" | "Advanced">("Intermediate");
   const [sourceRef, setSourceRef] = useState("");
 
+  // Custom Lab Modal state
+  const [isLabModalOpen, setIsLabModalOpen] = useState(false);
+  const [testingLab, setTestingLab] = useState<LabExercise | null>(null);
+  const [labTitle, setLabTitle] = useState("");
+  const [labDomain, setLabDomain] = useState("Official Statistics & Price Indices");
+  const [labLanguage, setLabLanguage] = useState<"python" | "sql">("python");
+  const [labDifficulty, setLabDifficulty] = useState<"Basic" | "Intermediate" | "Advanced">("Intermediate");
+  const [labInstructions, setLabInstructions] = useState("");
+  const [labSampleData, setLabSampleData] = useState("");
+  const [labInitialCode, setLabInitialCode] = useState("");
+  const [labSolutionCode, setLabSolutionCode] = useState("");
+  const [labSolutionHint, setLabSolutionHint] = useState("");
+
   const filteredBank = bank.filter((q) => {
     const matchSearch = q.question.toLowerCase().includes(searchBank.toLowerCase()) || q.topic.toLowerCase().includes(searchBank.toLowerCase());
     const matchComp = filterComp === "All" || q.competency === filterComp;
     return matchSearch && matchComp;
+  });
+
+  const filteredTrainerLabs = trainerLabs.filter((lab) => {
+    return (
+      lab.title.toLowerCase().includes(searchBank.toLowerCase()) ||
+      lab.instructions.toLowerCase().includes(searchBank.toLowerCase()) ||
+      lab.domain.toLowerCase().includes(searchBank.toLowerCase())
+    );
   });
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
@@ -5448,6 +5491,127 @@ function TrainerScreen() {
     setStatusMsg("Custom question successfully authored and added to Bank!");
   }
 
+  function handleAddCustomLab(e: React.FormEvent) {
+    e.preventDefault();
+    if (!labTitle.trim() || !labInstructions.trim() || !labInitialCode.trim() || !labSolutionCode.trim()) {
+      alert("Please fill in the title, instructions, initial challenge code, and solution code.");
+      return;
+    }
+
+    const customLab: LabExercise = {
+      id: `lab-custom-${Date.now()}`,
+      title: labTitle.trim(),
+      domain: labDomain,
+      language: labLanguage,
+      difficulty: labDifficulty,
+      instructions: labInstructions.trim(),
+      sampleData: labSampleData.trim() || undefined,
+      initialCode: labInitialCode.trim(),
+      solutionCode: labSolutionCode.trim(),
+      solutionHint: labSolutionHint.trim() || "Refer to standard official statistical methodology guidelines.",
+    };
+
+    saveCustomTrainerLab(customLab);
+    const updated = getAllAvailableLabs();
+    setTrainerLabs(updated);
+    setIsLabModalOpen(false);
+
+    // Reset form
+    setLabTitle("");
+    setLabInstructions("");
+    setLabSampleData("");
+    setLabInitialCode("");
+    setLabSolutionCode("");
+    setLabSolutionHint("");
+    setStatusMsg(`🎉 Custom Virtual Lab "${customLab.title}" successfully authored and published to all officers!`);
+  }
+
+  function handleDeleteCustomLab(id: string) {
+    if (confirm("Are you sure you want to remove this custom virtual lab from the academy sandboxes?")) {
+      deleteCustomTrainerLab(id);
+      setTrainerLabs(getAllAvailableLabs());
+      setStatusMsg("Virtual Lab removed from academy sandboxes.");
+    }
+  }
+
+  function fillPythonTemplate() {
+    setLabLanguage("python");
+    setLabTitle("CPI Sub-Index Disaggregation");
+    setLabDomain("Official Statistics & Price Indices");
+    setLabDifficulty("Intermediate");
+    setLabInstructions("Calculate the weighted subgroup index for Food & Beverages using monthly price quotes.");
+    setLabSampleData(`Item,Weight,BasePrice,CurrentPrice\nRice,15.2,40.0,48.0\nWheat,12.5,30.0,36.0\nMilk,8.1,50.0,60.0`);
+    setLabInitialCode(`# Academy Statistical Sandbox: Custom Lab
+# Instructions: Calculate subgroup_cpi = sum(w * (p_t / p_0)) / sum(w) * 100
+
+data = [
+    {"item": "Rice", "w": 15.2, "p0": 40.0, "pt": 48.0},
+    {"item": "Wheat", "w": 12.5, "p0": 30.0, "pt": 36.0},
+    {"item": "Milk", "w": 8.1, "p0": 50.0, "pt": 60.0},
+]
+
+# --- WRITE YOUR PYTHON CODE BELOW ---
+
+
+
+# Print summary report
+print("═══════════════════════════════════════════════════")
+print("           SUB-INDEX COMPILATION REPORT            ")
+print("═══════════════════════════════════════════════════")
+try:
+    print(f"Subgroup Index : {subgroup_cpi:.2f}")
+except NameError:
+    print("⚠️ Please calculate subgroup_cpi variable above.")
+`);
+    setLabSolutionCode(`# Academy Statistical Sandbox: Custom Lab
+data = [
+    {"item": "Rice", "w": 15.2, "p0": 40.0, "pt": 48.0},
+    {"item": "Wheat", "w": 12.5, "p0": 30.0, "pt": 36.0},
+    {"item": "Milk", "w": 8.1, "p0": 50.0, "pt": 60.0},
+]
+
+total_weighted = sum(item["w"] * (item["pt"] / item["p0"]) for item in data)
+total_w = sum(item["w"] for item in data)
+subgroup_cpi = (total_weighted / total_w) * 100.0
+
+print("═══════════════════════════════════════════════════")
+print("           SUB-INDEX COMPILATION REPORT            ")
+print("═══════════════════════════════════════════════════")
+print(f"Subgroup Index : {subgroup_cpi:.2f}")
+`);
+    setLabSolutionHint("Iterate through data items and compute weighted relative sum divided by total weights, then multiply by 100.");
+  }
+
+  function fillSqlTemplate() {
+    setLabLanguage("sql");
+    setLabTitle("Factory Employment SQL Grouping");
+    setLabDomain("Database Management & Big Data");
+    setLabDifficulty("Basic");
+    setLabInstructions("Write a SQL query over Factory_Registry to count total factories and sum total workers by District where Status = 'Active'.");
+    setLabSampleData(`Factory_ID,District,Workers,Status\nF01,Pune,450,Active\nF02,Pune,320,Active\nF03,Nagpur,210,Active\nF04,Nagpur,80,Inactive`);
+    setLabInitialCode(`-- SQL Sandbox: Factory Employment Grouping
+-- Instructions: Query Factory_Registry to calculate total factories and workers by District for Active units.
+
+-- Write your SQL query below:
+
+
+`);
+    setLabSolutionCode(`-- SQL Sandbox: Factory Employment Grouping
+SELECT 
+    District,
+    COUNT(Factory_ID) AS Total_Factories,
+    SUM(Workers) AS Total_Workers
+FROM 
+    Factory_Registry
+WHERE 
+    Status = 'Active'
+GROUP BY 
+    District
+ORDER BY 
+    Total_Workers DESC;`);
+    setLabSolutionHint("Use SELECT District, COUNT(Factory_ID), SUM(Workers) FROM Factory_Registry WHERE Status = 'Active' GROUP BY District;");
+  }
+
   function handleDeleteQuestion(id: number) {
     if (confirm("Are you sure you want to remove this question from the official Question Bank?")) {
       deleteTrainerMCQ(id);
@@ -5466,180 +5630,332 @@ function TrainerScreen() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 font-sans">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Academy Trainer &amp; RAG MCQ Studio</h1>
+          <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Academy Trainer &amp; Faculty Studio</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Upload official training manuals, extract context with RAG, and author verified examination items.
+            Author examination items, upload official training manuals for RAG, and publish custom Virtual Computing Sandboxes.
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => setIsAuthorModalOpen(true)}
-            className="px-4 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
-          >
-            <span>✍️</span>
-            <span>Author Custom MCQ</span>
-          </button>
-          <button
-            onClick={handleExportBankCsv}
-            className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
-          >
-            <span>📥</span>
-            <span>Export Bank (.csv)</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-        {[
-          { label: "Documents Uploaded", val: "12" },
-          { label: "Quizzes Created", val: "24" },
-          { label: "Questions in Bank", val: `${bank.length}` },
-          { label: "Accredited Questions", val: `${bank.filter(q => q.isValidated).length}` },
-        ].map((m) => (
-          <div key={m.label} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-2xs">
-            <div className="text-[10px] text-gray-400 font-bold">{m.label}</div>
-            <div className="text-xl font-bold text-[#0B3D66] mt-1">{m.val}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Upload Box */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Target Competency for RAG Ingestion</label>
-            <select
-              value={competency}
-              onChange={(e) => setCompetency(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] font-medium"
-            >
-              {DEFAULT_COMPETENCIES_CATALOGUE.map((c) => (
-                <option key={c.id} value={c.name}>
-                  {c.name} ({c.domain})
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Difficulty Calibration</label>
-            <select
-              value={difficulty}
-              onChange={(e) => setDifficulty(e.target.value as any)}
-              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] font-medium"
-            >
-              <option value="Basic">Basic (Foundational Level 1-2)</option>
-              <option value="Intermediate">Intermediate (Practitioner Level 3-4)</option>
-              <option value="Advanced">Advanced (Expert / Senior ISS Level 5)</option>
-            </select>
-          </div>
-        </div>
-
-        <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center relative bg-gray-50/50 hover:bg-blue-50/30 transition-all">
-          <input
-            type="file"
-            accept=".pdf,.txt,.docx,.csv,.md,.json"
-            onChange={handleFileUpload}
-            disabled={generating}
-            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
-          />
-          <div className="text-3xl mb-2">📄</div>
-          <div className="text-xs font-bold text-gray-800">
-            {generating ? (
-              <span className="flex items-center justify-center gap-2 text-[#0B3D66]">
-                <span className="w-4 h-4 border-2 border-[#0B3D66] border-t-transparent rounded-full animate-spin" />
-                <span>Processing Document with In-Browser RAG Engine...</span>
-              </span>
-            ) : (
-              "Upload MoSPI Training Manual, Guidelines, or Syllabus (PDF, DOCX, TXT, CSV, MD)"
-            )}
-          </div>
-          <p className="text-[10px] text-gray-400 mt-1">
-            Grounds questions 100% in document sentences with automated 4-option, 1-valid answer, and citation validation
-          </p>
-        </div>
-
-        {statusMsg && (
-          <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs text-blue-950 font-sans flex items-center justify-between shadow-2xs">
-            <div className="flex items-center gap-2">
-              <span>ℹ️</span>
-              <span>{statusMsg}</span>
-            </div>
-            <button onClick={() => setStatusMsg(null)} className="text-blue-700 hover:text-blue-950 font-bold cursor-pointer p-1">✕</button>
-          </div>
-        )}
-      </div>
-
-      {/* Question Bank List with Filter & Search */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b border-gray-100 gap-3">
-          <h2 className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">
-            Validated Question Bank ({filteredBank.length} Questions)
-          </h2>
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <input
-              type="text"
-              value={searchBank}
-              onChange={(e) => setSearchBank(e.target.value)}
-              placeholder="Filter questions..."
-              className="px-3 py-1.5 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] flex-1 sm:w-48"
-            />
+        <div className="flex gap-2 flex-wrap">
+          {activeTrainerStudioTab === "mcqs" ? (
+            <>
+              <button
+                onClick={() => setIsAuthorModalOpen(true)}
+                className="px-4 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>✍️</span>
+                <span>Author Custom MCQ</span>
+              </button>
+              <button
+                onClick={handleExportBankCsv}
+                className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+              >
+                <span>📥</span>
+                <span>Export Bank (.csv)</span>
+              </button>
+            </>
+          ) : (
             <button
-              onClick={() => {
-                if (confirm("Clear all items in the Question Bank?")) {
-                  setBank([]);
-                  saveTrainerQuestionBank([]);
-                }
-              }}
-              className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer shrink-0"
+              onClick={() => setIsLabModalOpen(true)}
+              className="px-4 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
             >
-              Clear Bank
+              <span>🧪</span>
+              <span>Author New Virtual Lab</span>
             </button>
-          </div>
+          )}
         </div>
+      </div>
 
-        {filteredBank.length > 0 ? (
-          <div className="space-y-3">
-            {filteredBank.map((q, idx) => (
-              <div key={q.id || idx} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/60 space-y-2 text-xs hover:border-gray-200 transition-colors">
-                <div className="flex justify-between items-start gap-2">
-                  <span className="font-bold text-gray-900">Q{idx + 1}: {q.question}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                      Validated ✓
-                    </span>
-                    <button
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      className="text-gray-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
-                      title="Delete question"
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-600">
-                  {q.options.map((opt, i) => (
-                    <div key={i} className={`p-2 rounded-lg border ${i === q.correctAnswerIndex ? "bg-emerald-50 border-emerald-300 font-bold text-emerald-900" : "bg-white border-gray-200"}`}>
-                      {String.fromCharCode(65 + i)}. {opt}
-                    </div>
-                  ))}
-                </div>
-                <div className="text-[10px] text-gray-500 pt-1 flex flex-col sm:flex-row justify-between gap-1">
-                  <span>Source: <strong>{q.sourceReference}</strong></span>
-                  <span>Competency: <strong className="text-[#0B3D66]">{q.competency}</strong> ({q.difficulty})</span>
-                </div>
+      {/* Main Studio Navigation Tabs */}
+      <div className="flex items-center gap-2 p-1.5 bg-gray-100 rounded-2xl w-fit">
+        <button
+          onClick={() => setActiveTrainerStudioTab("mcqs")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTrainerStudioTab === "mcqs"
+              ? "bg-white text-[#0B3D66] shadow-xs"
+              : "text-gray-600 hover:text-[#0B3D66]"
+          }`}
+        >
+          <span>📚</span>
+          <span>RAG &amp; MCQ Bank Studio ({bank.length})</span>
+        </button>
+        <button
+          onClick={() => setActiveTrainerStudioTab("labs")}
+          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+            activeTrainerStudioTab === "labs"
+              ? "bg-white text-[#0B3D66] shadow-xs"
+              : "text-gray-600 hover:text-[#0B3D66]"
+          }`}
+        >
+          <span>🧪</span>
+          <span>Virtual Labs Authoring Studio ({trainerLabs.length})</span>
+        </button>
+      </div>
+
+      {/* Global Status Banner */}
+      {statusMsg && (
+        <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs text-blue-950 font-sans flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span>ℹ️</span>
+            <span>{statusMsg}</span>
+          </div>
+          <button onClick={() => setStatusMsg(null)} className="text-blue-700 hover:text-blue-950 font-bold cursor-pointer p-1">✕</button>
+        </div>
+      )}
+
+      {/* ────────────────── TAB 1: MCQ BANK STUDIO ────────────────── */}
+      {activeTrainerStudioTab === "mcqs" && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            {[
+              { label: "Documents Uploaded", val: "12" },
+              { label: "Quizzes Created", val: "24" },
+              { label: "Questions in Bank", val: `${bank.length}` },
+              { label: "Accredited Questions", val: `${bank.filter(q => q.isValidated).length}` },
+            ].map((m) => (
+              <div key={m.label} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-2xs">
+                <div className="text-[10px] text-gray-400 font-bold">{m.label}</div>
+                <div className="text-xl font-bold text-[#0B3D66] mt-1">{m.val}</div>
               </div>
             ))}
           </div>
-        ) : (
-          <div className="py-8 text-center text-xs text-gray-400">
-            No questions found matching your filter. Author a question or upload a training document above.
+
+          {/* Upload Box */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Target Competency for RAG Ingestion</label>
+                <select
+                  value={competency}
+                  onChange={(e) => setCompetency(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] font-medium"
+                >
+                  {DEFAULT_COMPETENCIES_CATALOGUE.map((c) => (
+                    <option key={c.id} value={c.name}>
+                      {c.name} ({c.domain})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 mb-1">Difficulty Calibration</label>
+                <select
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value as any)}
+                  className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] font-medium"
+                >
+                  <option value="Basic">Basic (Foundational Level 1-2)</option>
+                  <option value="Intermediate">Intermediate (Practitioner Level 3-4)</option>
+                  <option value="Advanced">Advanced (Expert / Senior ISS Level 5)</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center relative bg-gray-50/50 hover:bg-blue-50/30 transition-all">
+              <input
+                type="file"
+                accept=".pdf,.txt,.docx,.csv,.md,.json"
+                onChange={handleFileUpload}
+                disabled={generating}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+              />
+              <div className="text-3xl mb-2">📄</div>
+              <div className="text-xs font-bold text-gray-800">
+                {generating ? (
+                  <span className="flex items-center justify-center gap-2 text-[#0B3D66]">
+                    <span className="w-4 h-4 border-2 border-[#0B3D66] border-t-transparent rounded-full animate-spin" />
+                    <span>Processing Document with In-Browser RAG Engine...</span>
+                  </span>
+                ) : (
+                  "Upload MoSPI Training Manual, Guidelines, or Syllabus (PDF, DOCX, TXT, CSV, MD)"
+                )}
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Grounds questions 100% in document sentences with automated 4-option, 1-valid answer, and citation validation
+              </p>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* Question Bank List with Filter & Search */}
+          <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b border-gray-100 gap-3">
+              <h2 className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">
+                Validated Question Bank ({filteredBank.length} Questions)
+              </h2>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <input
+                  type="text"
+                  value={searchBank}
+                  onChange={(e) => setSearchBank(e.target.value)}
+                  placeholder="Filter questions..."
+                  className="px-3 py-1.5 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] flex-1 sm:w-48"
+                />
+                <button
+                  onClick={() => {
+                    if (confirm("Clear all items in the Question Bank?")) {
+                      setBank([]);
+                      saveTrainerQuestionBank([]);
+                    }
+                  }}
+                  className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer shrink-0"
+                >
+                  Clear Bank
+                </button>
+              </div>
+            </div>
+
+            {filteredBank.length > 0 ? (
+              <div className="space-y-3">
+                {filteredBank.map((q, idx) => (
+                  <div key={q.id || idx} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/60 space-y-2 text-xs hover:border-gray-200 transition-colors">
+                    <div className="flex justify-between items-start gap-2">
+                      <span className="font-bold text-gray-900">Q{idx + 1}: {q.question}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                          Validated ✓
+                        </span>
+                        <button
+                          onClick={() => handleDeleteQuestion(q.id)}
+                          className="text-gray-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
+                          title="Delete question"
+                        >
+                          🗑️
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-600">
+                      {q.options.map((opt, i) => (
+                        <div key={i} className={`p-2 rounded-lg border ${i === q.correctAnswerIndex ? "bg-emerald-50 border-emerald-300 font-bold text-emerald-900" : "bg-white border-gray-200"}`}>
+                          {String.fromCharCode(65 + i)}. {opt}
+                        </div>
+                      ))}
+                    </div>
+                    <div className="text-[10px] text-gray-500 pt-1 flex flex-col sm:flex-row justify-between gap-1">
+                      <span>Source: <strong>{q.sourceReference}</strong></span>
+                      <span>Competency: <strong className="text-[#0B3D66]">{q.competency}</strong> ({q.difficulty})</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-8 text-center text-xs text-gray-400">
+                No questions found matching your filter. Author a question or upload a training document above.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────── TAB 2: VIRTUAL LABS AUTHORING STUDIO ────────────────── */}
+      {activeTrainerStudioTab === "labs" && (
+        <div className="space-y-6">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            {[
+              { label: "Total Sandboxes", val: `${trainerLabs.length}` },
+              { label: "Custom Faculty Labs", val: `${getCustomTrainerLabs().length}` },
+              { label: "Pyodide WASM Engine", val: "Python 3.11" },
+              { label: "SQLite WASM Engine", val: "Active" },
+            ].map((m) => (
+              <div key={m.label} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-2xs">
+                <div className="text-[10px] text-gray-400 font-bold">{m.label}</div>
+                <div className="text-xl font-bold text-[#0B3D66] mt-1">{m.val}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Search & Action Bar */}
+          <div className="bg-white rounded-3xl p-4 border border-gray-100 shadow-2xs flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div className="relative w-full sm:w-80">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">🔍</span>
+              <input
+                type="text"
+                value={searchBank}
+                onChange={(e) => setSearchBank(e.target.value)}
+                placeholder="Search virtual computing sandboxes..."
+                className="w-full pl-8 pr-3 py-2 bg-gray-50 rounded-xl text-xs text-gray-800 border border-gray-200 focus:outline-none focus:border-[#0B3D66]"
+              />
+            </div>
+            <button
+              onClick={() => setIsLabModalOpen(true)}
+              className="w-full sm:w-auto px-5 py-2.5 bg-[#0B3D66] hover:bg-[#FF7A00] text-white text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>➕</span>
+              <span>Author New Virtual Lab</span>
+            </button>
+          </div>
+
+          {/* List of Virtual Labs */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredTrainerLabs.map((lab) => {
+              const isCustom = lab.id.startsWith("lab-custom");
+              const isPython = lab.language === "python";
+              return (
+                <div
+                  key={lab.id}
+                  className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:border-blue-200 transition-all flex flex-col justify-between space-y-3"
+                >
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-1.5">
+                        <span className={`text-[10px] font-extrabold px-2.5 py-0.5 rounded-full ${
+                          isPython ? "bg-amber-100 text-amber-900 border border-amber-200" : "bg-blue-100 text-blue-900 border border-blue-200"
+                        }`}>
+                          {isPython ? "🐍 PYTHON 3.11" : "💾 SQLITE 3"}
+                        </span>
+                        {isCustom ? (
+                          <span className="text-[9px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                            ⚡ Faculty Custom
+                          </span>
+                        ) : (
+                          <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
+                            🏛️ MoSPI Official
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[10px] font-bold text-gray-400">{lab.difficulty}</span>
+                    </div>
+
+                    <div className="text-[10px] font-extrabold text-[#FF7A00] uppercase tracking-wider">
+                      {lab.domain}
+                    </div>
+
+                    <h3 className="text-xs font-bold text-[#0B3D66] leading-snug">
+                      {lab.title}
+                    </h3>
+
+                    <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed">
+                      {lab.instructions}
+                    </p>
+                  </div>
+
+                  <div className="pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
+                    <button
+                      onClick={() => setTestingLab(lab)}
+                      className="flex-1 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1"
+                    >
+                      <span>🚀 Test in Sandbox</span>
+                    </button>
+                    {isCustom && (
+                      <button
+                        onClick={() => handleDeleteCustomLab(lab.id)}
+                        className="px-3 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                        title="Delete Custom Lab"
+                      >
+                        🗑️
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ────────────── AUTHOR CUSTOM MCQ MODAL ────────────── */}
       {isAuthorModalOpen && (
@@ -5802,6 +6118,192 @@ function TrainerScreen() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* ────────────── AUTHOR CUSTOM VIRTUAL LAB MODAL ────────────── */}
+      {isLabModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-3xl w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 px-2 py-0.5 rounded">
+                  Faculty Computing Sandbox Studio
+                </span>
+                <h2 className="text-base font-bold text-[#0B3D66] mt-1">Author New Virtual Laboratory</h2>
+              </div>
+              <button
+                onClick={() => setIsLabModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Quick Boilerplate Templates */}
+            <div className="flex items-center gap-2 p-2.5 bg-blue-50/70 rounded-2xl border border-blue-200 text-xs">
+              <span className="font-bold text-[#0B3D66]">⚡ Quick Starters:</span>
+              <button
+                type="button"
+                onClick={fillPythonTemplate}
+                className="px-3 py-1 bg-white hover:bg-amber-50 text-amber-900 border border-amber-300 font-bold rounded-lg cursor-pointer text-[11px]"
+              >
+                🐍 Fill Python Template
+              </button>
+              <button
+                type="button"
+                onClick={fillSqlTemplate}
+                className="px-3 py-1 bg-white hover:bg-blue-50 text-blue-900 border border-blue-300 font-bold rounded-lg cursor-pointer text-[11px]"
+              >
+                💾 Fill SQL Template
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCustomLab} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Lab Title</label>
+                  <input
+                    type="text"
+                    value={labTitle}
+                    onChange={(e) => setLabTitle(e.target.value)}
+                    placeholder="e.g., CPI Rural-Urban Divergence Index"
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Cadre Domain / Discipline</label>
+                  <select
+                    value={labDomain}
+                    onChange={(e) => setLabDomain(e.target.value)}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  >
+                    <option value="Official Statistics & Price Indices">Official Statistics &amp; Price Indices</option>
+                    <option value="Survey Sampling & PLFS">Survey Sampling &amp; PLFS</option>
+                    <option value="Database Management & Big Data">Database Management &amp; Big Data</option>
+                    <option value="National Accounts & SDC Aggregates">National Accounts &amp; SDC Aggregates</option>
+                    <option value="Data Privacy & SDC Governance">Data Privacy &amp; SDC Governance</option>
+                    <option value="Geospatial Frame & Statistical Tools">Geospatial Frame &amp; Statistical Tools</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Execution Engine Language</label>
+                  <select
+                    value={labLanguage}
+                    onChange={(e) => setLabLanguage(e.target.value as any)}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  >
+                    <option value="python">Python 3.11 (Pyodide WASM with NumPy/Pandas)</option>
+                    <option value="sql">SQLite 3 (Relational Database Engine)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Difficulty Rating</label>
+                  <select
+                    value={labDifficulty}
+                    onChange={(e) => setLabDifficulty(e.target.value as any)}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  >
+                    <option value="Basic">Basic (Level 1-2)</option>
+                    <option value="Intermediate">Intermediate (Level 3-4)</option>
+                    <option value="Advanced">Advanced (Level 5 / Senior ISS)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Instructions &amp; Objective Statement</label>
+                <textarea
+                  rows={2}
+                  value={labInstructions}
+                  onChange={(e) => setLabInstructions(e.target.value)}
+                  placeholder="Explain the problem, inputs, and expected statistical output..."
+                  className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Sample Microdata Schema (CSV format, optional)</label>
+                <textarea
+                  rows={2}
+                  value={labSampleData}
+                  onChange={(e) => setLabSampleData(e.target.value)}
+                  placeholder="Item_ID,Commodity,Weight,Base_Price,Current_Price"
+                  className="w-full p-2.5 font-mono text-xs border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">
+                    Starter Challenge Code (<code className="text-amber-700">initialCode</code>)
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={labInitialCode}
+                    onChange={(e) => setLabInitialCode(e.target.value)}
+                    placeholder="# Provide starter data definitions and a clean # --- WRITE YOUR CODE BELOW --- prompt"
+                    className="w-full p-2.5 font-mono text-[11px] border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66] leading-relaxed"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">
+                    Reference Solution Code (<code className="text-emerald-700">solutionCode</code>)
+                  </label>
+                  <textarea
+                    rows={6}
+                    value={labSolutionCode}
+                    onChange={(e) => setLabSolutionCode(e.target.value)}
+                    placeholder="# Complete verified implementation that will be locked behind the reference solution toggle"
+                    className="w-full p-2.5 font-mono text-[11px] border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66] leading-relaxed"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Statistical Methodology Hint &amp; Citation</label>
+                <input
+                  type="text"
+                  value={labSolutionHint}
+                  onChange={(e) => setLabSolutionHint(e.target.value)}
+                  placeholder="Formula or methodological reference for the Solution tab"
+                  className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsLabModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-[#0B3D66] hover:bg-[#FF7A00] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  <span>🚀 Publish Virtual Lab</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Live Terminal Test Modal */}
+      {testingLab && (
+        <LiveTerminalModal
+          exercise={testingLab}
+          isOpen={Boolean(testingLab)}
+          onClose={() => setTestingLab(null)}
+        />
       )}
     </div>
   );

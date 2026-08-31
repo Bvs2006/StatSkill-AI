@@ -657,6 +657,41 @@ Pune,UFS-27-0104,340,2.00`,
   },
 ];
 
+const STORAGE_CUSTOM_LABS_KEY = "statskill_custom_trainer_labs";
+
+export function getCustomTrainerLabs(): LabExercise[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_CUSTOM_LABS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+export function saveCustomTrainerLab(lab: LabExercise): void {
+  try {
+    const existing = getCustomTrainerLabs();
+    const updated = [lab, ...existing.filter((l) => l.id !== lab.id)];
+    localStorage.setItem(STORAGE_CUSTOM_LABS_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error("Failed to save custom trainer lab", e);
+  }
+}
+
+export function deleteCustomTrainerLab(id: string): void {
+  try {
+    const existing = getCustomTrainerLabs();
+    const updated = existing.filter((l) => l.id !== id);
+    localStorage.setItem(STORAGE_CUSTOM_LABS_KEY, JSON.stringify(updated));
+  } catch (e) {
+    console.error("Failed to delete custom trainer lab", e);
+  }
+}
+
+export function getAllAvailableLabs(): LabExercise[] {
+  return [...getCustomTrainerLabs(), ...OFFICIAL_LAB_EXERCISES];
+}
+
 export function LiveTerminalModal({
   exercise,
   isOpen,
@@ -676,6 +711,8 @@ export function LiveTerminalModal({
   const [verifiedSuccess, setVerifiedSuccess] = useState<boolean | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const allLabs = getAllAvailableLabs();
+
   useEffect(() => {
     if (exercise) {
       setSelectedEx(exercise);
@@ -684,8 +721,9 @@ export function LiveTerminalModal({
       setVerifiedSuccess(null);
       setShowSolution(false);
     } else {
-      setSelectedEx(OFFICIAL_LAB_EXERCISES[0]);
-      setCode(OFFICIAL_LAB_EXERCISES[0].initialCode);
+      const first = allLabs[0] || OFFICIAL_LAB_EXERCISES[0];
+      setSelectedEx(first);
+      setCode(first.initialCode);
       setResult(null);
       setVerifiedSuccess(null);
       setShowSolution(false);
@@ -863,12 +901,12 @@ export function LiveTerminalModal({
             <select
               value={selectedEx.id}
               onChange={(e) => {
-                const found = OFFICIAL_LAB_EXERCISES.find((x) => x.id === e.target.value);
+                const found = allLabs.find((x) => x.id === e.target.value);
                 if (found) handleSwitchExercise(found);
               }}
               className="bg-[#1E2430] border border-gray-700 text-gray-300 text-[11px] sm:text-xs rounded-lg px-2 py-1 focus:outline-none max-w-[130px] sm:max-w-xs truncate cursor-pointer"
             >
-              {OFFICIAL_LAB_EXERCISES.map((ex) => (
+              {allLabs.map((ex) => (
                 <option key={ex.id} value={ex.id}>
                   {ex.title} ({ex.language.toUpperCase()})
                 </option>
