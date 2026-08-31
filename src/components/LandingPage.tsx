@@ -15,6 +15,45 @@ export function LandingPage({ onEnterApp, onDemoLogin }: LandingPageProps) {
   const [activeFaq, setActiveFaq] = useState<number | null>(0);
   const courses = getCourses();
 
+  // ──────────────────────────────────────────────
+  // Closed-Loop Interactive Showcase State
+  // ──────────────────────────────────────────────
+  const [activeLoopStep, setActiveLoopStep] = useState<number>(0);
+  const [simulatedComp, setSimulatedComp] = useState<string>("National Accounts & GVA");
+  const [simState, setSimState] = useState<"idle" | "assessing" | "diagnosing" | "learning" | "elevated">("idle");
+  const [simProgress, setSimProgress] = useState<number>(0);
+
+  function runSimulation() {
+    if (simState !== "idle" && simState !== "elevated") return;
+    setSimState("assessing");
+    setActiveLoopStep(0);
+    setSimProgress(25);
+
+    setTimeout(() => {
+      setSimState("diagnosing");
+      setActiveLoopStep(1);
+      setSimProgress(50);
+
+      setTimeout(() => {
+        setSimState("learning");
+        setActiveLoopStep(2);
+        setSimProgress(75);
+
+        setTimeout(() => {
+          setSimState("elevated");
+          setActiveLoopStep(3);
+          setSimProgress(100);
+        }, 1100);
+      }, 1100);
+    }, 1100);
+  }
+
+  function resetSimulation() {
+    setSimState("idle");
+    setSimProgress(0);
+    setActiveLoopStep(0);
+  }
+
   const categories = [
     {
       id: "national_accounts",
@@ -137,11 +176,15 @@ export function LandingPage({ onEnterApp, onDemoLogin }: LandingPageProps) {
         </div>
 
         <nav className="hidden lg:flex items-center gap-6 text-xs font-semibold text-gray-600">
+          <a href="#closed-loop" className="hover:text-[#0B3D66] text-[#FF7A00] font-bold transition-colors flex items-center gap-1">
+            <span>🔄</span>
+            <span>{lang === "HI" ? "क्लोज्ड-लूप इंजन" : lang === "TE" ? "క్లోజ్డ్-లూప్ ఇంజిన్" : "Closed-Loop Engine"}</span>
+          </a>
           <a href="#categories" className="hover:text-[#0B3D66] transition-colors">
             {lang === "HI" ? "दक्षता डोमेन" : lang === "TE" ? "నైపుణ్య విభాగాలు" : "Competency Domains"}
           </a>
           <a href="#features" className="hover:text-[#0B3D66] transition-colors">
-            {lang === "HI" ? "क्लोज्ड-लूप विशेषताएं" : lang === "TE" ? "క్లోజ్డ్-లూప్ ఫీచర్లు" : "Closed-Loop Features"}
+            {lang === "HI" ? "विशेषताएं" : lang === "TE" ? "ఫీచర్లు" : "Architecture"}
           </a>
           <a href="#courses" className="hover:text-[#0B3D66] transition-colors">
             {lang === "HI" ? "पाठ्यक्रम" : lang === "TE" ? "కోర్సులు" : "Popular Courses"}
@@ -384,6 +427,319 @@ export function LandingPage({ onEnterApp, onDemoLogin }: LandingPageProps) {
       </section>
 
       {/* ──────────────────────────────────────────────
+          3.5 The Closed-Loop Elevation Engine (Interactive Pipeline & Live Simulation)
+      ────────────────────────────────────────────── */}
+      <section id="closed-loop" className="py-16 md:py-24 bg-gradient-to-b from-white via-[#F0F6FC] to-white border-b border-gray-100 px-4 md:px-8">
+        <div className="max-w-6xl mx-auto space-y-12">
+          {/* Section Header */}
+          <div className="text-center max-w-3xl mx-auto space-y-3">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-100/90 text-orange-900 border border-orange-200 text-[11px] font-bold uppercase tracking-wider">
+              <span className="w-2 h-2 rounded-full bg-[#FF7A00] animate-ping" />
+              <span>{lang === "HI" ? "स्वायत्त क्लोज्ड-लूप दक्षता तंत्र" : lang === "TE" ? "స్వయంప్రతిపత్తి క్లోజ్డ్-లూప్ వ్యవస్థ" : "Autonomous Closed-Loop Competency Engine"}</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#0B3D66] font-serif">
+              {lang === "HI" ? "मूल्यांकन ➔ निदान ➔ शिक्षण ➔ पदोन्नति चक्र" : lang === "TE" ? "అంచనా ➔ లోప గుర్తింపు ➔ అభ్యాసం ➔ స్థాయి పెంపు చక్రం" : "The Closed-Loop Cycle: Assess → Diagnose → Learn → Elevate"}
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-600 leading-relaxed">
+              {lang === "HI"
+                ? "पारंपरिक प्रशिक्षण केवल घंटे गिनता है। स्टेटस्किल एआई प्रत्येक अधिकारी के ज्ञान का निरंतर परीक्षण कर, कौशल अंतरालों को स्वचालित रूप से पदोन्नत और डिजिटली प्रमाणित करता है।"
+                : lang === "TE"
+                ? "సాధారణ శిక్షణ లాగా కాకుండా, స్టాట్‌స్కిల్ AI ప్రతి అధికారి నైపుణ్యాలను నిరంతరం అంచనా వేసి, లోపాలను సరిదిద్ది, అధికారికంగా స్థాయిని పెంచుతుంది."
+                : "Breaking away from passive training. StatSkill AI dynamically assesses statistical competencies, pinpoints exact deficits against cadre benchmarks, dispenses precision micro-modules, and writes cryptographically verified promotions to the MoSPI Capacity Ledger."}
+            </p>
+          </div>
+
+          {/* 4-Stage Interactive Pipeline Stepper */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              {
+                step: 0,
+                code: "Assess",
+                title: lang === "HI" ? "1. नैदानिक मूल्यांकन" : lang === "TE" ? "1. సామర్థ్య అంచనా" : "1. Diagnostic Assess",
+                sub: lang === "HI" ? "एआई-अनुकूली परीक्षण" : lang === "TE" ? "AI ఆధారిత పరీక్ష" : "AI Adaptive Evaluation",
+                desc: lang === "HI" ? "संवर्ग ग्रेड (STS/JAG) मानकों पर आधारित LLaMA 3.3 70B बहुविकल्पीय परीक्षा।" : lang === "TE" ? "కేడర్ గ్రేడ్ ప్రమాణాలకు అనుగుణంగా రూపొందించిన AI పరీక్షలు." : "LLaMA 3.3 70B scenario MCQs calibrated to Indian Statistical Service cadre grade benchmarks.",
+                icon: "✍️",
+                color: "border-blue-300 bg-blue-50/50 text-[#0B3D66]",
+                activeColor: "bg-[#0B3D66] text-white ring-4 ring-blue-100 shadow-md",
+              },
+              {
+                step: 1,
+                code: "Diagnose",
+                title: lang === "HI" ? "2. कौशल अंतराल निदान" : lang === "TE" ? "2. లోపాల గుర్తింపు" : "2. Skill Deficit Matrix",
+                sub: lang === "HI" ? "लक्ष्य बनाम वर्तमान स्कोर" : lang === "TE" ? "లక్ష్యం vs ప్రస్తుత స్థాయి" : "Target vs Current Gap",
+                desc: lang === "HI" ? "कौशल रडार पर वर्तमान स्तर और पदोन्नति हेतु आवश्यक स्तर के बीच सटीक अंतराल गणना।" : lang === "TE" ? "ప్రస్తుత స్థాయి మరియు పదోన్నతికి అవసరమైన స్థాయి మధ్య వ్యత్యాస విశ్లేషణ." : "Calculates exact deficit scores between target benchmarks and current proficiency on dynamic radar.",
+                icon: "⚖️",
+                color: "border-amber-300 bg-amber-50/50 text-amber-900",
+                activeColor: "bg-amber-600 text-white ring-4 ring-amber-100 shadow-md",
+              },
+              {
+                step: 2,
+                code: "Learn",
+                title: lang === "HI" ? "3. लक्षित माइक्रो-लर्निंग" : lang === "TE" ? "3. ఖచ్చితమైన అభ్యాసం" : "3. Targeted Learning",
+                sub: lang === "HI" ? "एनएसएसटीए व वर्चुअल लैब" : lang === "TE" ? "NSSTA & వర్చువల్ ల్యాబ్‌లు" : "Prescriptive Sandboxes",
+                desc: lang === "HI" ? "पहचाने गए अंतराल को भरने हेतु विशिष्ट व्याख्यान खंड और वेबअसेंबली वर्चुअल लैब।" : lang === "TE" ? "గుర్తించిన లోపాలను నివారించడానికి ప్రత్యేక వీడియో పాఠాలు మరియు బ్రౌజర్ ల్యాబ్‌లు." : "Dispatches personalized NSSTA micro-lectures, survey datasets, and in-browser WASM sandbox exercises.",
+                icon: "🎯",
+                color: "border-purple-300 bg-purple-50/50 text-purple-900",
+                activeColor: "bg-purple-700 text-white ring-4 ring-purple-100 shadow-md",
+              },
+              {
+                step: 3,
+                code: "Elevate",
+                title: lang === "HI" ? "4. लेजर स्तर पदोन्नति" : lang === "TE" ? "4. అధికారిక స్థాయి పెంపు" : "4. Ledger Elevation",
+                sub: lang === "HI" ? "क्रिप्टोग्राफिक ऑडिट लॉग" : lang === "TE" ? "క్రిప్టోగ్రాఫిక్ ఆడిట్ లాగ్" : "Cryptographic Promotion",
+                desc: lang === "HI" ? "सत्यापित प्रवीणता पर MoSPI क्षमता लेजर में स्तर 4 (प्रवीण) पदोन्नति दर्ज।" : lang === "TE" ? "నైపుణ్యం ధృవీకరించిన తర్వాత సామర్థ్య లేజర్‌లో అధికారిక స్థాయి పెంపు నమోదు." : "Automatic competency promotion to Proficient with immutable W3C cryptographic signature.",
+                icon: "🎖️",
+                color: "border-emerald-300 bg-emerald-50/50 text-emerald-900",
+                activeColor: "bg-emerald-600 text-white ring-4 ring-emerald-100 shadow-md",
+              },
+            ].map((st) => (
+              <div
+                key={st.step}
+                onClick={() => setActiveLoopStep(st.step)}
+                className={`p-5 rounded-3xl border transition-all cursor-pointer flex flex-col justify-between ${
+                  activeLoopStep === st.step ? st.activeColor : "bg-white border-gray-200 hover:border-gray-300 shadow-2xs"
+                }`}
+              >
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-2xl">{st.icon}</span>
+                    <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                      activeLoopStep === st.step ? "bg-white/20 text-white" : "bg-gray-100 text-gray-600"
+                    }`}>
+                      Step {st.step + 1}
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-bold leading-snug">{st.title}</h3>
+                  <div className={`text-[11px] font-semibold ${activeLoopStep === st.step ? "text-white/80" : "text-gray-400"}`}>
+                    {st.sub}
+                  </div>
+                  <p className={`text-xs leading-relaxed ${activeLoopStep === st.step ? "text-white/90" : "text-gray-500"}`}>
+                    {st.desc}
+                  </p>
+                </div>
+                <div className="mt-4 pt-2 border-t border-current/10 flex items-center justify-between text-[10px] font-bold">
+                  <span>{activeLoopStep === st.step ? "● Active Focus" : "Click to Inspect"}</span>
+                  <span>→</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Interactive Live Closed-Loop Simulation Box */}
+          <div className="bg-white rounded-3xl border border-gray-200/90 shadow-xl overflow-hidden">
+            {/* Top Toolbar */}
+            <div className="bg-[#0B3D66] text-white p-4 sm:p-5 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-white/10 flex items-center justify-center text-lg">
+                  🔄
+                </div>
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-wider text-amber-300">
+                    Interactive Demonstration
+                  </div>
+                  <h3 className="text-sm sm:text-base font-bold">
+                    MoSPI Capacity Ledger Closed-Loop Verification Node
+                  </h3>
+                </div>
+              </div>
+
+              {/* Target Competency Selector */}
+              <div className="flex items-center gap-1.5 self-end sm:self-auto bg-white/10 p-1 rounded-xl">
+                {["National Accounts & GVA", "Sampling Theory & PPS", "Price Statistics (CPI / WPI)"].map((comp) => (
+                  <button
+                    key={comp}
+                    onClick={() => {
+                      setSimulatedComp(comp);
+                      resetSimulation();
+                    }}
+                    className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                      simulatedComp === comp ? "bg-white text-[#0B3D66] shadow-xs" : "text-blue-100 hover:text-white"
+                    }`}
+                  >
+                    {comp.split(" ")[0]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Simulation Body */}
+            <div className="p-6 md:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+              {/* Left Column: Metrics & Current Status */}
+              <div className="lg:col-span-5 space-y-4">
+                <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 space-y-3">
+                  <div className="flex justify-between items-center text-xs pb-2 border-b border-gray-200">
+                    <span className="text-gray-500 font-medium">Officer Persona:</span>
+                    <strong className="text-[#0B3D66]">Dr. Rajesh Sharma, ISS (STS Grade)</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pb-2 border-b border-gray-200">
+                    <span className="text-gray-500 font-medium">Target Competency:</span>
+                    <strong className="text-gray-800">{simulatedComp}</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-xs pb-2 border-b border-gray-200">
+                    <span className="text-gray-500 font-medium">STS Cadre Target:</span>
+                    <span className="px-2 py-0.5 bg-blue-100 text-[#0B3D66] font-bold rounded">Level 4 (Proficient)</span>
+                  </div>
+
+                  {/* Dynamic Gap Bar */}
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex justify-between text-xs font-bold">
+                      <span className="text-gray-600">Current Measured Level:</span>
+                      <span className={simState === "elevated" ? "text-emerald-600 font-extrabold" : "text-amber-600 font-extrabold"}>
+                        {simState === "elevated" ? "Level 4 (Proficient) 🎖️" : "Level 2 (Foundational) ⚠️"}
+                      </span>
+                    </div>
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden flex">
+                      <div
+                        className={`h-full transition-all duration-700 ${
+                          simState === "elevated" ? "bg-emerald-500 w-full" : "bg-amber-500 w-1/2"
+                        }`}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-gray-400 font-medium">
+                      <span>L1 Novice</span>
+                      <span>L2 Foundation</span>
+                      <span>L3 Intermediate</span>
+                      <span>L4 Proficient</span>
+                      <span>L5 Expert</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Deficit Badge */}
+                <div className={`p-3.5 rounded-2xl border text-xs flex items-center justify-between transition-all ${
+                  simState === "elevated"
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-950"
+                    : "bg-amber-50 border-amber-200 text-amber-950"
+                }`}>
+                  <div className="flex items-center gap-2 font-bold">
+                    <span>{simState === "elevated" ? "✅" : "⚠️"}</span>
+                    <span>{simState === "elevated" ? "Competency Deficit Closed (0.0 Gap)" : "Skill Gap Identified: -2.0 Deficit"}</span>
+                  </div>
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full ${
+                    simState === "elevated" ? "bg-emerald-200 text-emerald-900" : "bg-amber-200 text-amber-900"
+                  }`}>
+                    {simState === "elevated" ? "VERIFIED" : "ACTION REQUIRED"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Right Column: Live Simulated Step Animation */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="bg-gray-900 text-white rounded-2xl p-5 font-mono text-xs space-y-3 shadow-inner">
+                  <div className="flex items-center justify-between text-[11px] text-gray-400 pb-2 border-b border-gray-800">
+                    <span className="flex items-center gap-1.5">
+                      <span className={`w-2 h-2 rounded-full ${simState === "idle" ? "bg-gray-500" : "bg-emerald-400 animate-ping"}`} />
+                      <span>Closed-Loop Engine Stream</span>
+                    </span>
+                    <span>MoSPI Ledger v2.4</span>
+                  </div>
+
+                  <div className="space-y-2 text-[11px] min-h-[140px] flex flex-col justify-center">
+                    {simState === "idle" && (
+                      <div className="text-gray-400 text-center py-6 space-y-1">
+                        <div className="text-xl">⚡</div>
+                        <div>Ready to simulate closed-loop cycle for <strong>{simulatedComp}</strong></div>
+                        <div className="text-[10px] text-gray-500">Click the button below to watch the autonomous elevation in real-time</div>
+                      </div>
+                    )}
+
+                    {simState === "assessing" && (
+                      <div className="text-blue-300 space-y-1 animate-in fade-in">
+                        <div className="font-bold flex items-center gap-1.5 text-white">
+                          <span className="animate-spin">🔄</span>
+                          <span>[Stage 1/4] Running Diagnostic Evaluation...</span>
+                        </div>
+                        <p className="text-gray-400">» Generating LLaMA 3.3 70B scenario items for {simulatedComp}...</p>
+                        <p className="text-amber-300">» Pre-Assessment Score: 58% · Detected weak mastery on SUT rebalancing.</p>
+                      </div>
+                    )}
+
+                    {simState === "diagnosing" && (
+                      <div className="text-amber-300 space-y-1 animate-in fade-in">
+                        <div className="font-bold flex items-center gap-1.5 text-white">
+                          <span className="animate-spin">⚖️</span>
+                          <span>[Stage 2/4] Pinpointing Competency Deficit...</span>
+                        </div>
+                        <p className="text-gray-400">» Current Level: 2.0 (Foundational) | Target STS Benchmark: 4.0</p>
+                        <p className="text-rose-300">» Deficit Score: -2.0 · Flagged on Officer Skills Radar.</p>
+                      </div>
+                    )}
+
+                    {simState === "learning" && (
+                      <div className="text-purple-300 space-y-1 animate-in fade-in">
+                        <div className="font-bold flex items-center gap-1.5 text-white">
+                          <span className="animate-spin">🎯</span>
+                          <span>[Stage 3/4] Auto-Dispatching Targeted Micro-Learning...</span>
+                        </div>
+                        <p className="text-gray-400">» Prescribing: NSSTA UN SNA 2008 Double Deflation Module</p>
+                        <p className="text-emerald-300">» Virtual Lab Exercise Completed: 100% calculation accuracy verified.</p>
+                      </div>
+                    )}
+
+                    {simState === "elevated" && (
+                      <div className="text-emerald-300 space-y-1 animate-in fade-in">
+                        <div className="font-bold flex items-center gap-1.5 text-emerald-400">
+                          <span>🎖️</span>
+                          <span>[Stage 4/4] Closed-Loop Elevation Completed &amp; Signed!</span>
+                        </div>
+                        <p className="text-white font-bold">» New Competency Level: Level 4 (Proficient) ✓</p>
+                        <p className="text-gray-400">» Audit Hash: <span className="text-amber-400 font-mono">sha256:0x8f4d92a1...7e8c39a</span></p>
+                        <p className="text-blue-300">» Written to MoSPI Capacity Ledger · +12 CPD Hours Credited.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Progress Line */}
+                  <div className="w-full bg-gray-800 h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="bg-gradient-to-r from-orange-400 via-purple-400 to-emerald-400 h-full transition-all duration-500"
+                      style={{ width: `${simProgress}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Simulation Action Controls */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <button
+                      onClick={runSimulation}
+                      disabled={simState !== "idle" && simState !== "elevated"}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      <span>⚡</span>
+                      <span>
+                        {simState === "elevated"
+                          ? "Re-Run Elevation Simulation"
+                          : simState === "idle"
+                          ? "Run Live Closed-Loop Simulation"
+                          : "Simulating Engine..."}
+                      </span>
+                    </button>
+                    {simState === "elevated" && (
+                      <button
+                        onClick={resetSimulation}
+                        className="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer"
+                      >
+                        Reset
+                      </button>
+                    )}
+                  </div>
+
+                  <button
+                    onClick={() => onEnterApp("dashboard")}
+                    className="text-xs font-bold text-[#0B3D66] hover:text-[#FF7A00] flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span>Experience in Full Platform</span>
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ──────────────────────────────────────────────
           4. Why Thousands of Officers Trust Us (Bento Grid)
       ────────────────────────────────────────────── */}
       <section id="features" className="py-16 md:py-24 bg-[#F7F9FB] border-y border-gray-100 px-4 md:px-8">
@@ -406,12 +762,18 @@ export function LandingPage({ onEnterApp, onDemoLogin }: LandingPageProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Bento Card 1: Closed-Loop */}
-            <div className="bg-white rounded-3xl p-7 border border-gray-100 shadow-sm flex flex-col justify-between md:col-span-2 hover:shadow-md transition-shadow">
-              <div className="space-y-3">
-                <div className="w-10 h-10 rounded-xl bg-orange-100 text-[#FF7A00] flex items-center justify-center text-xl font-bold">
-                  🔄
+            <div className="bg-white rounded-3xl p-7 border border-orange-200/80 shadow-sm flex flex-col justify-between md:col-span-2 hover:shadow-xl hover:border-orange-300 transition-all group relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-orange-100/50 rounded-full blur-2xl pointer-events-none" />
+              <div className="space-y-3.5 relative z-10">
+                <div className="flex items-center justify-between">
+                  <div className="w-10 h-10 rounded-2xl bg-orange-100 text-[#FF7A00] flex items-center justify-center text-xl font-bold shadow-xs">
+                    🔄
+                  </div>
+                  <span className="text-[10px] font-extrabold uppercase px-2.5 py-1 rounded-full bg-orange-50 text-orange-800 border border-orange-200">
+                    Core Intelligence USP
+                  </span>
                 </div>
-                <h3 className="text-base font-bold text-[#0B3D66]">
+                <h3 className="text-base font-bold text-[#0B3D66] group-hover:text-[#FF7A00] transition-colors">
                   {lang === "HI"
                     ? "निरंतर क्लोज्ड-लूप दक्षता उन्नयन"
                     : lang === "TE"
@@ -425,11 +787,35 @@ export function LandingPage({ onEnterApp, onDemoLogin }: LandingPageProps) {
                     ? "ప్రతి ప్రక్రియ మూల్యాంకనం → లోపాల గుర్తింపు → అభ్యాసం → స్థాయి పెంపు చక్రంలో నడుస్తుంది. పరీక్షలు రాసి, రాడార్ ప్రొఫైల్ చూసి డిజిటల్ ధృవీకరణతో స్థాయిని పెంచుకోవచ్చు."
                     : "Every interaction operates on the strict Assess → Gap → Learn → Elevate cycle. Officers take diagnostic assessments, view granular skill gap radar profiles, consume tailored micro-modules, and automatically elevate their official competency levels with signed cryptographic audit trails."}
                 </p>
+
+                {/* Step breadcrumb */}
+                <div className="p-3 bg-blue-50/60 rounded-2xl border border-blue-100 flex items-center justify-between text-[10px] font-bold text-[#0B3D66]">
+                  <span className="flex items-center gap-1">✍️ Assess</span>
+                  <span>➔</span>
+                  <span className="flex items-center gap-1">⚖️ Diagnose</span>
+                  <span>➔</span>
+                  <span className="flex items-center gap-1">🎯 Learn</span>
+                  <span>➔</span>
+                  <span className="flex items-center gap-1 text-emerald-700">🎖️ Elevate</span>
+                </div>
               </div>
-              <div className="mt-6 flex items-center gap-2 text-[10px] font-bold text-gray-500 flex-wrap">
-                <span className="bg-gray-100 px-2.5 py-1 rounded-lg">✍️ {lang === "HI" ? "एआई प्रश्नोत्तरी" : lang === "TE" ? "AI క్విజ్" : "AI Diagnostic MCQs"}</span>
-                <span className="bg-gray-100 px-2.5 py-1 rounded-lg">⚖️ {lang === "HI" ? "कौशल अंतराल मैट्रिक्स" : lang === "TE" ? "నైపుణ్య లోపాల మ్యాట్రిక్స్" : "Skill Deficit Matrix"}</span>
-                <span className="bg-gray-100 px-2.5 py-1 rounded-lg">⚡ {lang === "HI" ? "त्वरित स्तर पदोन्नति" : lang === "TE" ? "స్థాయి పెంపు" : "Instant Elevation"}</span>
+
+              <div className="mt-6 flex items-center justify-between gap-2 flex-wrap pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-2 text-[10px] font-bold text-gray-500 flex-wrap">
+                  <span className="bg-gray-100 px-2.5 py-1 rounded-lg">✍️ {lang === "HI" ? "एआई प्रश्नोत्तरी" : lang === "TE" ? "AI క్విజ్" : "Diagnostic MCQs"}</span>
+                  <span className="bg-gray-100 px-2.5 py-1 rounded-lg">⚖️ {lang === "HI" ? "कौशल अंतराल" : lang === "TE" ? "నైపుణ్య లోపాలు" : "Deficit Matrix"}</span>
+                  <span className="bg-emerald-50 text-emerald-800 px-2.5 py-1 rounded-lg">⚡ {lang === "HI" ? "त्वरित स्तर पदोन्नति" : lang === "TE" ? "స్థాయి పెంపు" : "Instant Elevation"}</span>
+                </div>
+                <button
+                  onClick={() => {
+                    const el = document.getElementById("closed-loop");
+                    el?.scrollIntoView({ behavior: "smooth" });
+                    runSimulation();
+                  }}
+                  className="px-3 py-1.5 bg-[#0B3D66] hover:bg-[#FF7A00] text-white text-[11px] font-bold rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  ⚡ Test Simulator
+                </button>
               </div>
             </div>
 
