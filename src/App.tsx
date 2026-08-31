@@ -79,7 +79,6 @@ import {
   type VerifiableCertificate,
 } from "./services/storageService";
 
-import { DashboardMicroBot } from "./components/DashboardMicroBot";
 import { getRichCourseDetail } from "./services/courseContentData";
 import { generateOfficialDataset, triggerBrowserDownload } from "./services/fileDownloadService";
 
@@ -1959,14 +1958,6 @@ function DashboardScreen({
           </div>
         ))}
       </div>
-
-      {/* Rapid AI Closed-Loop Micro-Bot Widget */}
-      <DashboardMicroBot
-        onNav={onNav}
-        onRefreshCompetencies={() => {
-          // Triggers re-render of competencies across dashboard
-        }}
-      />
 
       {/* Radar & Priority Gaps */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">

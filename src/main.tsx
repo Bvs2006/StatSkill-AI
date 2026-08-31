@@ -26,10 +26,16 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
     console.error('Global Application Error:', error, errorInfo)
   }
 
+  handleRetry = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
   handleReset = () => {
-    localStorage.clear()
-    window.location.reload()
-  }
+    try {
+      localStorage.clear();
+    } catch {}
+    window.location.reload();
+  };
 
   render() {
     if (this.state.hasError) {
@@ -40,29 +46,38 @@ class GlobalErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySta
               ⚠️
             </div>
             <h1 className="text-xl font-bold font-serif text-white">StatSkill AI Platform</h1>
-            <p className="text-xs text-slate-400">
-              A temporary runtime state was encountered: {this.state.error?.message || "Please refresh your session."}
+            <p className="text-xs text-slate-300 bg-slate-950/60 p-3 rounded-xl border border-slate-700 font-mono break-all text-left max-h-28 overflow-y-auto">
+              {this.state.error?.message || "Please refresh your session."}
             </p>
-            <div className="pt-2 flex gap-3 justify-center">
+            <div className="pt-2 flex flex-wrap gap-2.5 justify-center">
               <button
+                type="button"
+                onClick={this.handleRetry}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
+              >
+                Try Again
+              </button>
+              <button
+                type="button"
                 onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl transition-all cursor-pointer"
+                className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
               >
                 Reload Page
               </button>
               <button
+                type="button"
                 onClick={this.handleReset}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl transition-all cursor-pointer"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-bold rounded-xl transition-all cursor-pointer shadow-xs"
               >
-                Reset Session Data
+                Reset Session
               </button>
             </div>
           </div>
         </div>
-      )
+      );
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }
 
