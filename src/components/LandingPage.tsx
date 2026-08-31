@@ -758,23 +758,51 @@ export function LandingPage({ onEnterApp, onDemoLogin }: LandingPageProps) {
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-gray-500">
+        <div className="max-w-6xl mx-auto pt-6 pb-20 md:pb-0 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-gray-500">
           <div>
             © 2026 Ministry of Statistics and Programme Implementation (MoSPI), Government of India. All rights reserved.
           </div>
           <div className="flex items-center gap-4">
-            <button onClick={() => onEnterApp("login")} className="hover:text-gray-300 transition-colors">
+            <button onClick={() => onEnterApp("login")} className="hover:text-gray-300 transition-colors cursor-pointer">
               Officer Portal
             </button>
-            <button onClick={() => onDemoLogin("trainer")} className="hover:text-gray-300 transition-colors">
+            <button onClick={() => onDemoLogin("trainer")} className="hover:text-gray-300 transition-colors cursor-pointer">
               Trainer Portal
             </button>
-            <button onClick={() => onDemoLogin("admin")} className="hover:text-gray-300 transition-colors">
+            <button onClick={() => onDemoLogin("admin")} className="hover:text-gray-300 transition-colors cursor-pointer">
               Admin Console
             </button>
           </div>
         </div>
       </footer>
+
+      {/* Mobile Bottom Navigation Bar for Landing Page */}
+      <nav
+        aria-label="Mobile Landing Navigation"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-t border-gray-200 px-1 py-1 flex justify-around items-center shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[calc(0.35rem+env(safe-area-inset-bottom,0px))] pointer-events-auto"
+      >
+        {[
+          { id: "dashboard" as const, label: "Home", icon: "🏛️" },
+          { id: "skills" as const, label: "Skills", icon: "🎯" },
+          { id: "courses" as const, label: "Courses", icon: "📚" },
+          { id: "labs" as const, label: "Sandbox", icon: "💻" },
+          { id: "assistant" as const, label: "AI Tutor", icon: "🤖" },
+        ].map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onEnterApp(item.id);
+            }}
+            className="flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all cursor-pointer select-none touch-manipulation min-h-[48px] active:scale-95 text-gray-600 hover:text-[#0B3D66] font-medium"
+          >
+            <span className="text-lg leading-none mb-0.5 pointer-events-none">{item.icon}</span>
+            <span className="text-[10px] tracking-tight pointer-events-none">{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

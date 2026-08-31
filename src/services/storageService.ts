@@ -435,6 +435,102 @@ export const DEFAULT_COURSES_CATALOGUE: CourseItem[] = [
     progressPct: 0,
   },
   {
+    id: "igot-107",
+    title: "Cloud Computing & Scalable Microdata Pipelines for Census",
+    provider: "iGOT",
+    category: "Technical",
+    duration: "16 hours · 4 modules",
+    durationHours: 16,
+    rating: 4.7,
+    reviewsCount: 185,
+    enrolledCount: 1320,
+    level: "Intermediate",
+    competenciesCovered: ["Cloud Infrastructure & APIs", "Enterprise IT Systems"],
+    primaryCompetency: "Cloud Infrastructure & APIs",
+    description: "Deploying secure serverless data pipelines, object storage buckets for decennial census microdata, and API load balancing.",
+    url: "https://igotkarmayogi.gov.in/app/toc/do_cloud_census/overview",
+    language: "English",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Architect secure government cloud storage buckets for census records",
+      "Deploy scalable microdata transformation pipelines",
+      "Configure REST API endpoints with rate-limiting and access control",
+    ],
+  },
+  {
+    id: "igot-108",
+    title: "Cybersecurity Protocols & Information Assurance for MoSPI Servers",
+    provider: "iGOT",
+    category: "Digital Governance",
+    duration: "10 hours · 3 modules",
+    durationHours: 10,
+    rating: 4.9,
+    reviewsCount: 410,
+    enrolledCount: 3200,
+    level: "Foundation",
+    competenciesCovered: ["Cybersecurity Protocols", "Data Privacy (DPDP Act)"],
+    primaryCompetency: "Cybersecurity Protocols",
+    description: "CERT-In compliance guidelines, two-factor authentication enforcement, secure socket layers, and data breach prevention.",
+    url: "https://igotkarmayogi.gov.in/app/toc/do_cybersecurity_govt/overview",
+    language: "English / Hindi",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Implement CERT-In compliance protocols for government databases",
+      "Configure encryption and two-factor authentication standards",
+      "Establish rapid incident reporting and data breach mitigation",
+    ],
+  },
+  {
+    id: "igot-109",
+    title: "Public Policy Decision Making & Evidence-Based Governance",
+    provider: "iGOT",
+    category: "Behavioural",
+    duration: "14 hours · 4 modules",
+    durationHours: 14,
+    rating: 4.8,
+    reviewsCount: 350,
+    enrolledCount: 2800,
+    level: "Intermediate",
+    competenciesCovered: ["Public Policy Decision Making", "Data Visualization & Storytelling"],
+    primaryCompetency: "Public Policy Decision Making",
+    description: "Synthesizing multi-sectoral survey evidence, calculating benefit-cost ratios, and drafting policy briefs for Union Cabinet approval.",
+    url: "https://igotkarmayogi.gov.in/app/toc/do_policy_governance/overview",
+    language: "English",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Synthesize large-scale survey findings into Cabinet notes",
+      "Perform multi-criteria cost-benefit analysis for social welfare schemes",
+      "Frame evidence-based policy arguments for executive leadership",
+    ],
+  },
+  {
+    id: "igot-110",
+    title: "Executive Leadership & Strategic Management for Statistical Cadres",
+    provider: "iGOT",
+    category: "Behavioural",
+    duration: "16 hours · 4 modules",
+    durationHours: 16,
+    rating: 4.9,
+    reviewsCount: 290,
+    enrolledCount: 2150,
+    level: "Advanced",
+    competenciesCovered: ["Team Leadership & Governance", "Public Policy Decision Making", "Leadership & Mentorship"],
+    primaryCompetency: "Team Leadership & Governance",
+    description: "Strategic change management, inter-cadre coordination across central ministries, and mentoring junior statistical officers.",
+    url: "https://igotkarmayogi.gov.in/app/toc/do_leadership_iss/overview",
+    language: "English",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Lead cross-functional field survey and analytical teams",
+      "Manage inter-ministerial statistical coordination protocols",
+      "Mentor junior officers under the Mission Karmayogi competency framework",
+    ],
+  },
+  {
     id: "nssta-201",
     title: "UN System of National Accounts (SNA 2008) & GVA Compilation",
     provider: "NSSTA",
@@ -510,6 +606,102 @@ export const DEFAULT_COURSES_CATALOGUE: CourseItem[] = [
     language: "English",
     enrolled: false,
     progressPct: 0,
+  },
+  {
+    id: "nssta-205",
+    title: "UN Fundamental Principles of Official Statistics & Professional Ethics",
+    provider: "NSSTA",
+    category: "Behavioural",
+    duration: "12 hours · 4 modules",
+    durationHours: 12,
+    rating: 4.9,
+    reviewsCount: 160,
+    enrolledCount: 980,
+    level: "Foundation",
+    competenciesCovered: ["Ethics in Official Statistics", "Public Policy Decision Making"],
+    primaryCompetency: "Ethics in Official Statistics",
+    description: "Adherence to UN Fundamental Principles of Official Statistics (UNFPOS), professional independence, data confidentiality, and ethical integrity in government data publication.",
+    url: "https://nssta.gov.in/programmes/unfpos-ethics",
+    language: "English / Hindi",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Apply the 10 UN Fundamental Principles of Official Statistics in daily governance",
+      "Ensure respondent confidentiality and data integrity under the Collection of Statistics Act",
+      "Maintain professional independence and public trust in official releases",
+    ],
+  },
+  {
+    id: "nssta-206",
+    title: "Sustainable Development Goal (SDG) Indicators & National Indicator Framework",
+    provider: "NSSTA",
+    category: "Statistical",
+    duration: "16 hours · 5 modules",
+    durationHours: 16,
+    rating: 4.8,
+    reviewsCount: 220,
+    enrolledCount: 1540,
+    level: "Intermediate",
+    competenciesCovered: ["SDG Indicators & Metadata", "National Accounts & GVA"],
+    primaryCompetency: "SDG Indicators & Metadata",
+    description: "Monitoring India's SDG National Indicator Framework (NIF), metadata standardization, data harmonisation across line ministries, and UN custody agency reporting.",
+    url: "https://nssta.gov.in/programmes/sdg-metadata-nif",
+    language: "English",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Map administrative dataset variables to SDG NIF target indicators",
+      "Author standardized statistical metadata following SDMX guidelines",
+      "Coordinate international reporting data flows with UN Custodian Agencies",
+    ],
+  },
+  {
+    id: "nssta-207",
+    title: "R Statistical Computing for Complex Survey Sampling & Econometric Modelling",
+    provider: "NSSTA",
+    category: "Technical",
+    duration: "20 hours · 6 modules",
+    durationHours: 20,
+    rating: 4.9,
+    reviewsCount: 310,
+    enrolledCount: 2100,
+    level: "Intermediate",
+    competenciesCovered: ["R Statistical Computing", "Sampling Theory & PPS"],
+    primaryCompetency: "R Statistical Computing",
+    description: "Applying R and the 'survey' package for complex stratified multi-stage designs, survey weight calibration, variance estimation, and econometric modeling.",
+    url: "https://nssta.gov.in/programmes/r-survey-computing",
+    language: "English",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Utilize R's 'survey' package for complex stratified cluster sampling designs",
+      "Calibrate survey weights using raking and post-stratification techniques",
+      "Run survey-weighted linear and logistic regression models",
+    ],
+  },
+  {
+    id: "nssta-208",
+    title: "Digital Public Infrastructure (DPI) & Statistical Data Exchange Architecture",
+    provider: "NSSTA",
+    category: "Digital Governance",
+    duration: "14 hours · 4 modules",
+    durationHours: 14,
+    rating: 4.8,
+    reviewsCount: 190,
+    enrolledCount: 1280,
+    level: "Intermediate",
+    competenciesCovered: ["Digital Public Infrastructure", "Cloud Infrastructure & APIs"],
+    primaryCompetency: "Digital Public Infrastructure",
+    description: "Architectural integration with India Stack, e-Pramaan, DigiLocker, API Setu, and developing open statistical data exchange protocols.",
+    url: "https://nssta.gov.in/programmes/dpi-data-exchange",
+    language: "English",
+    enrolled: false,
+    progressPct: 0,
+    learningOutcomes: [
+      "Integrate government data platforms with India Stack and API Setu",
+      "Implement e-Pramaan authentication and consent artifacts for statistical microdata",
+      "Design open, standardized data exchange APIs for inter-ministerial access",
+    ],
   },
 ];
 
@@ -943,6 +1135,173 @@ export const DEFAULT_EMPLOYEES: EmployeeRecord[] = [
 ];
 
 // ──────────────────────────────────────────────
+// 10. Normalized Token-Overlap Matching Helper
+// ──────────────────────────────────────────────
+
+/**
+ * Normalizes text for fuzzy token matching, removing generic noise words
+ */
+export function normalizeTokens(str: string): Set<string> {
+  const stopWords = new Set([
+    "and", "in", "for", "of", "the", "with", "to", "act", "by", "on", "a", "an", "&", "its",
+    "course", "official", "systems", "training", "programmes", "methodology", "general"
+  ]);
+  return new Set(
+    str
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 0 && !stopWords.has(w))
+  );
+}
+
+/**
+ * Fuzzy token-overlap and domain-aware matcher between a course and a target competency
+ */
+export function courseMatchesCompetency(
+  course: {
+    primaryCompetency?: string;
+    competenciesCovered?: string[];
+    competencyList?: string[];
+    title?: string;
+    name?: string;
+    description?: string;
+  },
+  competencyName: string
+): boolean {
+  if (!competencyName || !course) return false;
+
+  const target = competencyName.toLowerCase().trim();
+  const primary = (course.primaryCompetency || "").toLowerCase().trim();
+  const coveredList = course.competenciesCovered || course.competencyList || [];
+  const covered = coveredList.map((c) => c.toLowerCase().trim());
+  const title = (course.title || course.name || "").toLowerCase().trim();
+  const description = (course.description || "").toLowerCase().trim();
+
+  // 1. Direct or Substring match on competency fields
+  if (primary === target || covered.includes(target)) return true;
+  if (primary && (primary.includes(target) || target.includes(primary))) return true;
+  if (covered.some((c) => c.includes(target) || target.includes(c))) return true;
+
+  // 2. High-precision Domain Key Term Mappings
+  const keyRules: { targetKeys: string[]; courseMatchers: ((cTitle: string, cDesc: string, cPrimary: string, cCovered: string[]) => boolean) }[] = [
+    {
+      targetKeys: ["r statistical", "r computing", "r programming"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return /\br statistical\b|\br programming\b|\br language\b|\br script\b|\busing r\b|\br and the 'survey'\b/i.test(full);
+      },
+    },
+    {
+      targetKeys: ["sdg", "sustainable development goal"],
+      courseMatchers: (t, d, p, cov) => `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase().includes("sdg") || `${t} ${d}`.includes("national indicator framework"),
+    },
+    {
+      targetKeys: ["ethics", "unfpos"],
+      courseMatchers: (t, d, p, cov) => `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase().includes("ethics") || `${t} ${d}`.includes("unfpos") || `${t} ${d}`.includes("professional ethics"),
+    },
+    {
+      targetKeys: ["digital public infrastructure", "dpi"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("digital public infrastructure") || full.includes("dpi") || full.includes("india stack") || full.includes("digilocker") || full.includes("e-pramaan");
+      },
+    },
+    {
+      targetKeys: ["leadership", "governance", "team leadership"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("leadership") || full.includes("strategic management") || full.includes("mentoring junior");
+      },
+    },
+    {
+      targetKeys: ["privacy", "dpdp"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("dpdp") || full.includes("data privacy") || full.includes("k-anonymity") || full.includes("disclosure control");
+      },
+    },
+    {
+      targetKeys: ["cybersecurity"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("cybersecurity") || full.includes("cert-in") || full.includes("information assurance");
+      },
+    },
+    {
+      targetKeys: ["cloud infrastructure", "cloud computing"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("cloud computing") || full.includes("cloud infrastructure") || full.includes("serverless");
+      },
+    },
+    {
+      targetKeys: ["gis", "geospatial"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("gis") || full.includes("qgis") || full.includes("geospatial") || full.includes("shapefile");
+      },
+    },
+    {
+      targetKeys: ["plfs", "labour & employment", "labour and employment"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("plfs") || full.includes("labour force") || full.includes("unemployment rate");
+      },
+    },
+    {
+      targetKeys: ["cpi", "price statistics", "wpi"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("cpi") || full.includes("price index") || full.includes("laspeyres");
+      },
+    },
+    {
+      targetKeys: ["national accounts", "gva", "sna"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("national accounts") || full.includes("gva") || full.includes("sna 2008") || full.includes("supply-use");
+      },
+    },
+    {
+      targetKeys: ["sampling theory", "pps", "survey design"],
+      courseMatchers: (t, d, p, cov) => {
+        const full = `${t} ${d} ${p} ${cov.join(" ")}`.toLowerCase();
+        return full.includes("sampling") || full.includes("survey design") || full.includes("pps") || full.includes("stratified");
+      },
+    },
+  ];
+
+  for (const rule of keyRules) {
+    if (rule.targetKeys.some((k) => target.includes(k) || k.includes(target))) {
+      if (rule.courseMatchers(title, description, primary, covered)) {
+        return true;
+      }
+    }
+  }
+
+  // 3. Significant Token Overlap Matching (excluding generic statistical words)
+  const genericStatsWords = new Set(["data", "statistics", "statistical", "processing", "analysis", "analytics", "methods", "theory", "survey"]);
+  const targetTokens = Array.from(normalizeTokens(competencyName)).filter((t) => !genericStatsWords.has(t));
+  if (targetTokens.length === 0) return false;
+
+  const courseTokens = new Set<string>([
+    ...Array.from(normalizeTokens(course.primaryCompetency || "")),
+    ...Array.from(normalizeTokens(coveredList.join(" "))),
+    ...Array.from(normalizeTokens(course.title || course.name || "")),
+  ]);
+
+  let matchCount = 0;
+  for (const token of targetTokens) {
+    if (courseTokens.has(token)) {
+      matchCount++;
+    }
+  }
+
+  return matchCount >= Math.min(2, targetTokens.length);
+}
+
+// ──────────────────────────────────────────────
 // 10. Personalized Learning Path Generator
 // ──────────────────────────────────────────────
 export function getPersonalizedLearningPath(
@@ -959,13 +1318,10 @@ export function getPersonalizedLearningPath(
   const steps: LearningPathStep[] = [];
   const usedCourseIds = new Set<string>();
 
-  // 1. Match courses to top priority gaps
+  // 1. Match courses to top priority gaps using normalized fuzzy matcher
   for (const gap of sortedGaps) {
     const matchingCourse = allCourses.find(
-      (c) =>
-        !usedCourseIds.has(c.id) &&
-        (c.primaryCompetency.toLowerCase() === gap.competencyName.toLowerCase() ||
-          c.competenciesCovered.some((cc) => cc.toLowerCase().includes(gap.competencyName.toLowerCase()) || gap.competencyName.toLowerCase().includes(cc.toLowerCase())))
+      (c) => !usedCourseIds.has(c.id) && courseMatchesCompetency(c, gap.competencyName)
     );
 
     if (matchingCourse) {
@@ -1026,9 +1382,7 @@ export function getExplainableRecommendations(
   for (const gap of gaps) {
     if (gap.gap === 0 && gap.priorityLevel !== "High") continue;
 
-    const matchingCourses = courses.filter((c) =>
-      c.competenciesCovered.includes(gap.competencyName) || c.primaryCompetency === gap.competencyName
-    );
+    const matchingCourses = courses.filter((c) => courseMatchesCompetency(c, gap.competencyName));
 
     for (const course of matchingCourses) {
       if (recommendations.some((r) => r.courseId === course.id)) continue;
@@ -1129,7 +1483,21 @@ export function getCourses(): CourseItem[] {
   const stored = localStorage.getItem(STORAGE_KEYS.COURSES);
   if (stored) {
     try {
-      return JSON.parse(stored);
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length >= DEFAULT_COURSES_CATALOGUE.length) {
+        return parsed;
+      }
+      // If stored catalogue is older/smaller than our expanded default catalogue (e.g. 10 vs 18), merge without losing progress
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        const merged = DEFAULT_COURSES_CATALOGUE.map((defCourse) => {
+          const existing = parsed.find((p: CourseItem) => p.id === defCourse.id);
+          return existing
+            ? { ...defCourse, enrolled: existing.enrolled, progressPct: existing.progressPct, completedDate: existing.completedDate }
+            : defCourse;
+        });
+        localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(merged));
+        return merged;
+      }
     } catch {}
   }
   return DEFAULT_COURSES_CATALOGUE;
@@ -1144,6 +1512,9 @@ export function getCourseImage(c: { id?: string; category?: string; primaryCompe
   if (title.includes("python") || comp.includes("python") || title.includes("data analysis")) {
     return "https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?auto=format&fit=crop&w=600&q=80";
   }
+  if (title.includes("r stat") || comp.includes("r stat") || title.includes("econometric") || comp.includes("r ")) {
+    return "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80";
+  }
   if (title.includes("ai") || title.includes("machine learning") || comp.includes("artificial intelligence") || comp.includes("ml")) {
     return "https://images.unsplash.com/photo-1677442136019-21780efad99a?auto=format&fit=crop&w=600&q=80";
   }
@@ -1156,22 +1527,37 @@ export function getCourseImage(c: { id?: string; category?: string; primaryCompe
   if (title.includes("national accounts") || title.includes("gva") || title.includes("sna") || comp.includes("national accounts")) {
     return "https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&w=600&q=80";
   }
+  if (title.includes("sdg") || comp.includes("sdg") || title.includes("sustainability")) {
+    return "https://images.unsplash.com/photo-1532619675605-1ede6c2ed2b0?auto=format&fit=crop&w=600&q=80";
+  }
   if (title.includes("price") || title.includes("cpi") || title.includes("inflation") || comp.includes("index")) {
     return "https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=600&q=80";
   }
   if (title.includes("sql") || title.includes("database") || comp.includes("sql") || title.includes("warehousing")) {
     return "https://images.unsplash.com/photo-1544383835-bda2bc66a55d?auto=format&fit=crop&w=600&q=80";
   }
+  if (title.includes("cloud") || comp.includes("cloud") || title.includes("microdata pipelines")) {
+    return "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("cybersecurity") || comp.includes("cybersecurity") || title.includes("cert-in")) {
+    return "https://images.unsplash.com/photo-1563986768609-322da13575f3?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("digital public infrastructure") || comp.includes("digital public infrastructure") || title.includes("dpi") || comp.includes("dpi")) {
+    return "https://images.unsplash.com/photo-1558494949-ef010cbdcc31?auto=format&fit=crop&w=600&q=80";
+  }
+  if (title.includes("ethics") || comp.includes("ethics") || title.includes("unfpos")) {
+    return "https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80";
+  }
   if (title.includes("storytelling") || title.includes("visualization") || comp.includes("visualization") || title.includes("dashboard")) {
     return "https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=600&q=80";
   }
-  if (title.includes("dpdp") || title.includes("governance") || title.includes("data protection") || comp.includes("governance")) {
+  if (title.includes("dpdp") || title.includes("data protection") || comp.includes("dpdp") || comp.includes("privacy")) {
     return "https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80";
   }
   if (title.includes("time series") || title.includes("forecast") || comp.includes("econometric")) {
     return "https://images.unsplash.com/photo-1642543492481-44e81e3914a7?auto=format&fit=crop&w=600&q=80";
   }
-  if (cat.includes("behavioural") || title.includes("leadership") || title.includes("management") || title.includes("policy")) {
+  if (cat.includes("behavioural") || title.includes("leadership") || title.includes("management") || title.includes("policy") || comp.includes("leadership") || comp.includes("policy")) {
     return "https://images.unsplash.com/photo-1577495508048-b635879837f1?auto=format&fit=crop&w=600&q=80";
   }
   return "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=600&q=80";

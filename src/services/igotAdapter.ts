@@ -134,76 +134,29 @@ export function saveAdapterConfig(cfg: IgotAdapterConfig): void {
   localStorage.setItem(ADAPTER_STORAGE_KEY, JSON.stringify(cfg));
 }
 
-// ──────────────────────────────────────────────
-// Sample / Mock Sunbird Course Data Store
-// ──────────────────────────────────────────────
+import { CourseItem, DEFAULT_COURSES_CATALOGUE, getCourses } from "./storageService";
 
-const MOCK_SUNBIRD_COURSES: IgotCourseSummary[] = [
-  {
-    identifier: "do_3138920194829107201",
-    name: "UN System of National Accounts (SNA 2008) & GVA Compilation",
-    description: "Official MoSPI NSSTA methodology for compiling Gross Value Added, Supply-Use Tables (SUT), and GDP deflators.",
+export function courseItemToSunbirdSummary(course: CourseItem): IgotCourseSummary {
+  return {
+    identifier: course.id,
+    name: course.title,
+    description: course.description,
     contentType: "Course",
-    primaryCategory: "Statistical Methodology",
-    organisation: ["National Statistical Systems Training Academy (NSSTA)", "MoSPI"],
-    duration: "20h total",
-    durationHours: 20,
-    rating: 4.9,
-    reviewsCount: 240,
-    leafNodesCount: 8,
-    competencyList: ["National Accounts & GVA", "SUT Commodity Flow"],
+    primaryCategory: course.category === "Technical" ? "Data Science & Technical" : course.category === "Statistical" ? "Statistical Methodology" : course.category,
+    organisation: course.provider === "NSSTA" ? ["National Statistical Systems Training Academy (NSSTA)", "MoSPI"] : ["iGOT Karmayogi Bharat", "Digital India"],
+    duration: course.duration,
+    durationHours: course.durationHours || 16,
+    rating: course.rating,
+    reviewsCount: course.reviewsCount,
+    leafNodesCount: course.syllabusModules ? course.syllabusModules.length : 4,
+    competencyList: [course.primaryCompetency, ...(course.competenciesCovered || [])],
     trackable: { enabled: "Yes", autoBatch: "Yes" },
-    lastUpdatedOn: "2026-05-10T10:00:00.000Z",
-  },
-  {
-    identifier: "do_3138920194829107202",
-    name: "Periodic Labour Force Survey (PLFS) & Sampling Design",
-    description: "Comprehensive training on sampling methodologies, UFS urban frames, and labour force estimators (LFPR, WPR, UR).",
-    contentType: "Course",
-    primaryCategory: "Statistical Methodology",
-    organisation: ["Survey Design & Research Division (SDRD)", "MoSPI"],
-    duration: "18h total",
-    durationHours: 18,
-    rating: 4.8,
-    reviewsCount: 180,
-    leafNodesCount: 6,
-    competencyList: ["Labour & Employment Statistics (PLFS)", "Sampling Design"],
-    trackable: { enabled: "Yes", autoBatch: "Yes" },
-    lastUpdatedOn: "2026-04-18T14:30:00.000Z",
-  },
-  {
-    identifier: "do_3138920194829107203",
-    name: "Python for NSSO Microdata Processing & Automation",
-    description: "Data pipelines with Pandas, NumPy, Statsmodels, and handling multi-gigabyte survey unit-level text data.",
-    contentType: "Course",
-    primaryCategory: "Data Science & Technical",
-    organisation: ["iGOT Karmayogi Bharat", "Digital India"],
-    duration: "20h total",
-    durationHours: 20,
-    rating: 4.9,
-    reviewsCount: 420,
-    leafNodesCount: 6,
-    competencyList: ["Python for NSSO Microdata & ML", "Database Management"],
-    trackable: { enabled: "Yes", autoBatch: "Yes" },
-    lastUpdatedOn: "2026-05-01T09:15:00.000Z",
-  },
-  {
-    identifier: "do_3138920194829107204",
-    name: "Digital Personal Data Protection (DPDP) Act & Statistical Disclosure Control",
-    description: "Legal safeguards under India's DPDP Act 2023, data anonymization techniques (k-anonymity), and microdata perturbation.",
-    contentType: "Course",
-    primaryCategory: "Digital Governance",
-    organisation: ["Ministry of Electronics and IT (MeitY)", "iGOT Karmayogi"],
-    duration: "8h total",
-    durationHours: 8,
-    rating: 4.8,
-    reviewsCount: 520,
-    leafNodesCount: 3,
-    competencyList: ["Data Privacy (DPDP Act) & Security", "Digital Governance"],
-    trackable: { enabled: "Yes", autoBatch: "Yes" },
-    lastUpdatedOn: "2026-03-22T11:00:00.000Z",
-  },
-];
+    lastUpdatedOn: "2026-05-15T10:00:00.000Z",
+  };
+}
+
+export const MOCK_SUNBIRD_COURSES: IgotCourseSummary[] = DEFAULT_COURSES_CATALOGUE.map(courseItemToSunbirdSummary);
+
 
 // ──────────────────────────────────────────────
 // iGOT Integration Adapter Class
@@ -278,16 +231,29 @@ export class IgotAdapter {
       }
     }
 
-    // 2. Mock Sunbird Response Envelope
-    let results = MOCK_SUNBIRD_COURSES;
+    // 2. Mock Sunbird Response Envelope (derived live from unified catalogue)
+    const catalogue = typeof window !== "undefined" ? getCourses() : DEFAULT_COURSES_CATALOGUE;
+    let results: IgotCourseSummary[] = catalogue.map(courseItemToSunbirdSummary);
+
     if (query.trim()) {
       const q = query.toLowerCase();
       results = results.filter(
-        (c) => c.name.toLowerCase().includes(q) || c.description.toLowerCase().includes(q)
+        (c) =>
+          c.name.toLowerCase().includes(q) ||
+          c.description.toLowerCase().includes(q) ||
+          c.competencyList.some((comp) => comp.toLowerCase().includes(q))
       );
     }
     if (primaryCategory) {
-      results = results.filter((c) => c.primaryCategory === primaryCategory);
+      const pCat = primaryCategory.toLowerCase();
+      results = results.filter(
+        (c) =>
+          c.primaryCategory.toLowerCase() === pCat ||
+          (pCat.includes("tech") && c.primaryCategory.toLowerCase().includes("tech")) ||
+          (pCat.includes("stat") && c.primaryCategory.toLowerCase().includes("stat")) ||
+          (pCat.includes("gov") && c.primaryCategory.toLowerCase().includes("gov")) ||
+          (pCat.includes("beh") && c.primaryCategory.toLowerCase().includes("beh"))
+      );
     }
 
     return {
@@ -334,10 +300,15 @@ export class IgotAdapter {
     }
 
     // 2. Mock Course Hierarchy Tree
+    const catalogue = typeof window !== "undefined" ? getCourses() : DEFAULT_COURSES_CATALOGUE;
+    const course = catalogue.find((c) => c.id === courseId);
+    const courseTitle = course?.title || "Specialized Official Statistics & Governance Programme";
+    const courseDesc = course?.description || "Official structured syllabus for Indian Statistical Service & NSSTA officers.";
+
     const mockHierarchy: IgotCourseHierarchy = {
       identifier: courseId,
-      name: "UN System of National Accounts (SNA 2008) & GVA Compilation",
-      description: "Official structured syllabus for Indian Statistical Service & NSSTA officers.",
+      name: courseTitle,
+      description: courseDesc,
       contentType: "Course",
       mimeType: "application/vnd.ekstep.content-collection",
       children: [

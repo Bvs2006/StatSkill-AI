@@ -672,17 +672,18 @@ function IgotAdapterModal({ isOpen, onClose }: { isOpen: boolean; onClose: () =>
 }
 
 // ──────────────────────────────────────────────
+// ──────────────────────────────────────────────
 // Mobile Bottom Navigation Bar (Fast Native Access)
 // ──────────────────────────────────────────────
 
-function MobileBottomNav({
+export function MobileBottomNav({
   current,
   onNav,
-  role,
+  role = "learner",
 }: {
   current: Screen;
   onNav: (s: Screen) => void;
-  role: UserRole;
+  role?: UserRole;
 }) {
   const learnerNav: { id: Screen; label: string; icon: string }[] = [
     { id: "dashboard", label: "Home", icon: "🏛️" },
@@ -708,10 +709,23 @@ function MobileBottomNav({
     { id: "assistant", label: "AI Tutor", icon: "🤖" },
   ];
 
-  const items = role === "admin" ? adminNav : role === "trainer" ? trainerNav : learnerNav;
+  const effectiveRole = role || "learner";
+  const items = effectiveRole === "admin" ? adminNav : effectiveRole === "trainer" ? trainerNav : learnerNav;
+
+  const handleNavClick = (screenId: Screen) => {
+    onNav(screenId);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      const mainEl = document.getElementById("main-content");
+      if (mainEl) mainEl.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-1.5 py-1 flex justify-around items-center shadow-lg pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))]">
+    <nav
+      aria-label="Mobile Navigation"
+      className="md:hidden fixed bottom-0 left-0 right-0 z-[100] bg-white/95 backdrop-blur-md border-t border-gray-200 px-1 py-1 flex justify-around items-center shadow-[0_-4px_20px_rgba(0,0,0,0.08)] pb-[calc(0.35rem+env(safe-area-inset-bottom,0px))] pointer-events-auto"
+    >
       {items.map((item) => {
         const isActive =
           current === item.id ||
@@ -732,21 +746,33 @@ function MobileBottomNav({
           <button
             key={item.id}
             type="button"
-            onClick={() => onNav(item.id)}
-            className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer min-w-[54px] active:scale-95 ${
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              handleNavClick(item.id);
+            }}
+            className={`flex-1 flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all cursor-pointer select-none touch-manipulation min-h-[48px] active:scale-95 pointer-events-auto ${
               isActive
-                ? "text-[#0B3D66] font-bold"
+                ? "text-[#0B3D66] font-bold bg-blue-50/60"
                 : "text-gray-500 hover:text-gray-800 font-medium"
             }`}
           >
-            <span className={`text-base leading-none mb-0.5 transition-transform ${isActive ? "scale-110" : ""}`}>
+            <span
+              className={`text-lg leading-none mb-0.5 pointer-events-none transition-transform ${
+                isActive ? "scale-110" : ""
+              }`}
+            >
               {item.icon}
             </span>
-            <span className={`text-[10px] tracking-tight ${isActive ? "text-[#0B3D66] font-extrabold" : "text-gray-500"}`}>
+            <span
+              className={`text-[10px] tracking-tight pointer-events-none ${
+                isActive ? "text-[#0B3D66] font-extrabold" : "text-gray-500"
+              }`}
+            >
               {item.label}
             </span>
             {isActive && (
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7A00] mt-0.5 animate-in fade-in" />
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FF7A00] mt-0.5 animate-in fade-in pointer-events-none" />
             )}
           </button>
         );
@@ -773,11 +799,21 @@ function AppShell({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const profile = getProfile();
 
+  const handleNav = (s: Screen) => {
+    setMobileMenuOpen(false);
+    onNav(s);
+    if (typeof window !== "undefined") {
+      window.scrollTo({ top: 0, behavior: "instant" });
+      const mainEl = document.getElementById("main-content");
+      if (mainEl) mainEl.scrollTo({ top: 0, behavior: "instant" });
+    }
+  };
+
   return (
     <div className="flex h-full min-h-screen bg-[#F7F9FB]">
       <Sidebar
         current={screen}
-        onNav={onNav}
+        onNav={handleNav}
         mobileOpen={mobileMenuOpen}
         onMobileClose={() => setMobileMenuOpen(false)}
       />
@@ -786,10 +822,12 @@ function AppShell({
           onLogout={() => onNav("login")}
           onMenuOpen={() => setMobileMenuOpen(true)}
           onRoleChange={onRoleChange}
-          onNav={onNav}
+          onNav={handleNav}
         />
-        <main className="flex-1 overflow-auto p-3 sm:p-4 md:p-6 pb-24 md:pb-8">{children}</main>
-        <MobileBottomNav current={screen} onNav={onNav} role={profile.role} />
+        <main id="main-content" className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-4 md:p-6 pb-28 md:pb-8">
+          {children}
+        </main>
+        <MobileBottomNav current={screen} onNav={handleNav} role={profile.role} />
       </div>
     </div>
   );
