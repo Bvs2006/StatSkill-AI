@@ -242,14 +242,14 @@ function SidebarContent({
 
   return (
     <aside
-      className="h-full bg-gradient-to-b from-[#061e38] via-[#092e52] to-[#04172b] border-r border-white/10 flex flex-col shrink-0 transition-all duration-300 shadow-2xl relative select-none font-sans"
+      className="h-full bg-gradient-to-b from-[#1864A6] via-[#0F4C81] to-[#0B3D66] border-r border-white/15 flex flex-col shrink-0 transition-all duration-300 shadow-2xl relative select-none font-sans"
       style={{ width: collapsed ? 72 : 264 }}
     >
       {/* Subtle Sidebar Ambient Glow */}
-      <div className="absolute top-0 left-0 w-full h-40 bg-blue-500/10 rounded-full blur-2xl pointer-events-none" />
+      <div className="absolute top-0 left-0 w-full h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
       {/* Header */}
-      <div className={`border-b border-white/10 flex items-center transition-all duration-200 ${collapsed ? "px-3 py-4 justify-center" : "px-4 py-4 justify-between"} relative z-10`}>
+      <div className={`border-b border-white/15 flex items-center transition-all duration-200 ${collapsed ? "px-3 py-4 justify-center" : "px-4 py-4 justify-between"} relative z-10`}>
         {!collapsed ? (
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-400 via-orange-500 to-amber-300 text-slate-950 flex items-center justify-center font-extrabold text-base shrink-0 shadow-lg border border-white/30">
@@ -287,7 +287,7 @@ function SidebarContent({
           return (
             <div key={secIdx} className="space-y-1">
               {!collapsed && (
-                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-blue-200/50">
+                <div className="px-3 pb-1 text-[10px] font-bold uppercase tracking-widest text-amber-200/70">
                   {sec.title}
                 </div>
               )}
@@ -305,8 +305,8 @@ function SidebarContent({
                       collapsed ? "justify-center p-2.5 my-1" : "px-3 py-2 gap-2.5"
                     } ${
                       active
-                        ? "bg-gradient-to-r from-blue-600/90 to-indigo-600/90 text-white font-bold shadow-md shadow-blue-900/40 border-l-4 border-amber-400 pl-2"
-                        : "text-white/75 hover:bg-white/10 hover:text-white"
+                        ? "bg-white/20 text-white font-bold shadow-md backdrop-blur-md border-l-4 border-amber-300 pl-2"
+                        : "text-white/80 hover:bg-white/10 hover:text-white"
                     }`}
                   >
                     <span className="text-sm shrink-0 group-hover:scale-110 transition-transform">
@@ -336,22 +336,22 @@ function SidebarContent({
 
       {/* Officer Mini Profile Card */}
       {!collapsed && (
-        <div className="px-3 py-2.5 mx-2.5 mb-2 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-sm relative z-10 flex items-center justify-between">
+        <div className="px-3 py-2.5 mx-2.5 mb-2 rounded-2xl bg-black/15 border border-white/15 backdrop-blur-sm relative z-10 flex items-center justify-between">
           <div className="min-w-0 pr-2">
             <div className="text-[11px] font-bold text-white truncate">{profile.name || "Officer Rajesh"}</div>
-            <div className="text-[9px] text-blue-200/70 truncate">{profile.designation || "Statistical Officer"}</div>
+            <div className="text-[9px] text-blue-100/80 truncate">{profile.designation || "Statistical Officer"}</div>
           </div>
-          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30 shrink-0">
+          <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full bg-amber-400/25 text-amber-200 border border-amber-400/40 shrink-0">
             {profile.cadreGrade || "STS"}
           </span>
         </div>
       )}
 
       {/* Collapse Toggle */}
-      <div className="p-2 border-t border-white/10 hidden md:block relative z-10">
+      <div className="p-2 border-t border-white/15 hidden md:block relative z-10">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="w-full flex items-center justify-center p-2 rounded-xl text-white/60 hover:text-white hover:bg-white/10 transition-all text-xs font-bold cursor-pointer gap-2"
+          className="w-full flex items-center justify-center p-2 rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all text-xs font-bold cursor-pointer gap-2"
         >
           <span>{collapsed ? "→" : "← Collapse Sidebar"}</span>
         </button>
