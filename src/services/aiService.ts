@@ -111,7 +111,132 @@ export async function callGroqChatCompletion(
 }
 
 /**
- * Generate Multiple Choice Questions from uploaded content using Groq LLM
+ * In-browser RAG Fact-Extraction Engine
+ * Extracts authentic MCQs directly from uploaded document sentences, clauses, and formulas.
+ */
+export function extractDocumentGroundedMCQs(
+  documentText: string,
+  count: number = 5,
+  difficulty: "Basic" | "Intermediate" | "Advanced" = "Intermediate",
+  domain: string = "Statistical"
+): GeneratedQuestion[] {
+  const cleanText = documentText.replace(/\r\n/g, "\n").trim();
+  if (cleanText.length < 80) {
+    return generateDynamicFallbackQuestions(cleanText, count, difficulty, domain);
+  }
+
+  // Split into paragraphs & sentences
+  const paragraphs = cleanText
+    .split(/\n\s*\n|\n(?=[A-Z0-9\.\-\–\—\•\*]+[\:\.\s])/)
+    .map((p) => p.replace(/\s+/g, " ").trim())
+    .filter((p) => p.length > 30 && !p.startsWith("---") && !p.startsWith("Page "));
+
+  const sentences = cleanText
+    .split(/(?<=[.?!])\s+(?=[A-Z0-9])/)
+    .map((s) => s.replace(/\s+/g, " ").trim())
+    .filter((s) => s.length > 25 && s.length < 250);
+
+  const questions: GeneratedQuestion[] = [];
+  const usedSentences = new Set<string>();
+
+  // Patterns indicating high-value factual assessment items
+  const definitionPatterns = [
+    /^(.*?)\s+(is defined as|refers to|is the process of|denotes|is a measure of)\s+(.*)$/i,
+    /^(.*?)\s+(must be|shall be|is required to|is responsible for|is calculated by|is derived by)\s+(.*)$/i,
+    /^(under|according to|as per)\s+([^,]+),\s*(.*)$/i,
+    /^(the purpose of|the objective of|the main role of)\s+([^is]+)\s+is\s+(.*)$/i,
+  ];
+
+  for (const sentence of sentences) {
+    if (questions.length >= count) break;
+    if (usedSentences.has(sentence)) continue;
+
+    for (const pattern of definitionPatterns) {
+      const match = sentence.match(pattern);
+      if (match && match.length >= 3) {
+        usedSentences.add(sentence);
+        const subject = match[1].replace(/^[•\-\*\d\.\s]+/, "").trim();
+        const predicate = match[match.length - 1].replace(/[.;]+$/, "").trim();
+
+        if (subject.length > 4 && subject.length < 60 && predicate.length > 8 && predicate.length < 120) {
+          const correctAnswer = predicate.charAt(0).toUpperCase() + predicate.slice(1);
+          
+          const distractors = [
+            `Exclusively applies to decentralized state agencies without central validation`,
+            `Restricted only to exploratory pilot surveys prior to full-frame release`,
+            `Exempt from standard verification and reporting guidelines under national frameworks`,
+          ];
+
+          const otherSentences = sentences.filter((s) => s !== sentence && s.length > 20);
+          if (otherSentences.length >= 3) {
+            distractors[0] = otherSentences[0].slice(0, 80).replace(/[.;]+$/, "");
+            distractors[1] = otherSentences[1].slice(0, 80).replace(/[.;]+$/, "");
+            distractors[2] = otherSentences[2].slice(0, 80).replace(/[.;]+$/, "");
+          }
+
+          const options = [correctAnswer, ...distractors].sort(() => Math.random() - 0.5);
+          const answerIdx = options.indexOf(correctAnswer);
+
+          questions.push({
+            id: questions.length + 1,
+            question: `According to the training document, what is stated regarding "${subject}"?`,
+            options,
+            answer: answerIdx >= 0 ? answerIdx : 0,
+            explanation: `Document Citation: "${sentence}"`,
+            domain: (domain as any) || "Statistical",
+            difficulty,
+            competencyTarget: subject.length < 35 ? subject : "Document Ingestion",
+            source: "ai",
+          });
+          break;
+        }
+      }
+    }
+  }
+
+  // Fill remaining questions with paragraph key concepts
+  if (questions.length < count) {
+    for (const para of paragraphs) {
+      if (questions.length >= count) break;
+      if (usedSentences.has(para)) continue;
+
+      const firstSentence = para.split(/[.?!]/)[0].trim();
+      if (firstSentence.length > 20 && firstSentence.length < 120) {
+        usedSentences.add(para);
+        const summary = para.slice(0, 100).replace(/[.;]+$/, "");
+        const options = [
+          summary,
+          `Mandates indefinite archiving of unweighted sample units across all rounds`,
+          `Prohibits the publication of sub-round indices without external ministerial sanction`,
+          `Limits data collection to registered urban municipal corporations only`,
+        ].sort(() => Math.random() - 0.5);
+
+        questions.push({
+          id: questions.length + 1,
+          question: `Based on the uploaded manual, which of the following represents the documented standard for: "${firstSentence.slice(0, 60)}..."?`,
+          options,
+          answer: options.indexOf(summary),
+          explanation: `Document Reference: "${para.slice(0, 200)}..."`,
+          domain: (domain as any) || "Statistical",
+          difficulty,
+          competencyTarget: "Official Document Analysis",
+          source: "ai",
+        });
+      }
+    }
+  }
+
+  // If still fewer than count, fill with rich master pool questions
+  if (questions.length < count) {
+    const fallbacks = generateDynamicFallbackQuestions(cleanText, count - questions.length, difficulty, domain);
+    questions.push(...fallbacks.map((f, idx) => ({ ...f, id: questions.length + idx + 1 })));
+  }
+
+  return questions.slice(0, count);
+}
+
+/**
+ * Generate Multiple Choice Questions from uploaded content using Groq LLM with Document RAG fallback
  */
 export async function generateMCQsFromText(
   content: string,
@@ -122,16 +247,16 @@ export async function generateMCQsFromText(
   const apiKey = getGroqApiKey();
   const randomSeed = `${Date.now()}_${Math.floor(Math.random() * 10000)}`;
 
-  // If no API key, use randomized dynamic domain generator
+  // If no API key, use in-browser document RAG extraction
   if (!apiKey) {
     return {
-      questions: generateDynamicFallbackQuestions(content, count, difficulty, domain),
+      questions: extractDocumentGroundedMCQs(content, count, difficulty, domain),
       source: "mock",
     };
   }
 
   const prompt = `You are a Senior Technical & Statistical Assessment Officer for India's Ministry of Statistics and Programme Implementation (MoSPI) and NSSTA.
-Generate ${count} completely unique multiple choice questions based on the uploaded document or syllabus below.
+Generate ${count} completely unique multiple choice questions strictly and directly based on the uploaded document or syllabus below.
 
 Seed: ${randomSeed}
 
@@ -143,9 +268,10 @@ ${content.slice(0, 15000)}
 CRITICAL REQUIREMENTS:
 - Domain: ${domain}
 - Difficulty: ${difficulty}
+- Generate questions DIRECTLY and ONLY from the provided document facts, policies, numbers, and methodologies.
 - Each question must have 4 plausible, realistic options.
 - The correct answer index must vary across 0, 1, 2, 3 (do NOT always make 0 correct).
-- Provide a clear official rationale/explanation citing Indian statistical guidelines or standard methodologies.
+- Provide a clear official rationale/explanation citing the exact sentence or section from the document.
 - Tag the specific competency target.
 
 Return ONLY valid JSON matching this exact structure:
@@ -156,7 +282,7 @@ Return ONLY valid JSON matching this exact structure:
       "question": "Question text here?",
       "options": ["Option A text", "Option B text", "Option C text", "Option D text"],
       "answer": 1,
-      "explanation": "Official explanation text.",
+      "explanation": "Document citation & explanation text.",
       "domain": "${domain}",
       "difficulty": "${difficulty}",
       "competencyTarget": "Competency Name"
@@ -171,19 +297,18 @@ Return ONLY valid JSON matching this exact structure:
         { role: "system", content: "You are a specialized JSON exam API for India's Ministry of Statistics. You always return a valid JSON object containing a questions array." },
         { role: "user", content: prompt },
       ],
-      { jsonMode: true, max_tokens: 3000, temperature: 0.7 }
+      { jsonMode: true, max_tokens: 3000, temperature: 0.5 }
     );
 
-    if (!groqResult) {
-      console.warn("[AI Service] Falling back to mock data: Groq API unavailable");
+    if (!groqResult || !groqResult.text) {
+      console.warn("[AI Service] Falling back to document RAG extraction: Groq API unavailable");
       return {
-        questions: generateDynamicFallbackQuestions(content, count, difficulty, domain),
+        questions: extractDocumentGroundedMCQs(content, count, difficulty, domain),
         source: "mock",
       };
     }
 
-    const data = await res.json();
-    const rawContent = data.choices?.[0]?.message?.content || "";
+    const rawContent = groqResult.text;
     
     // Parse JSON
     let parsed: any;
@@ -213,7 +338,7 @@ Return ONLY valid JSON matching this exact structure:
       question: q.question || `Assessment Question ${idx + 1}`,
       options: Array.isArray(q.options) && q.options.length === 4 ? q.options : ["Option A", "Option B", "Option C", "Option D"],
       answer: typeof q.answer === "number" && q.answer >= 0 && q.answer <= 3 ? q.answer : Math.floor(Math.random() * 4),
-      explanation: q.explanation || "Detailed official statistical explanation.",
+      explanation: q.explanation || "Detailed official document explanation.",
       domain: (q.domain as any) || domain || "Statistical",
       difficulty: (q.difficulty as any) || difficulty || "Intermediate",
       competencyTarget: q.competencyTarget || "Official Statistics",
@@ -222,9 +347,9 @@ Return ONLY valid JSON matching this exact structure:
 
     return { questions: formattedQuestions, source: "ai" };
   } catch (err: any) {
-    console.warn("[AI Service] Falling back to mock data: Failed to generate with Groq", err.message);
+    console.warn("[AI Service] Falling back to document RAG: Failed to generate with Groq", err.message);
     return {
-      questions: generateDynamicFallbackQuestions(content, count, difficulty, domain),
+      questions: extractDocumentGroundedMCQs(content, count, difficulty, domain),
       source: "mock",
     };
   }

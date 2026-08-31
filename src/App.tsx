@@ -2034,24 +2034,75 @@ function SkillsScreen({
 function AssessmentScreen({
   onFinish,
 }: {
-  onFinish: (qList: GeneratedQuestion[], aList: (number | null)[]) => void;
+  onFinish: (qList: GeneratedQuestion[], aList: (number | null)[], domain: string) => void;
 }) {
+  const profile = getProfile();
   const [started, setStarted] = useState(false);
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
   const [answers, setAnswers] = useState<(number | null)[]>([]);
+  const [flagged, setFlagged] = useState<boolean[]>([]);
   const [qIdx, setQIdx] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(900); // 15 mins
+  const [selectedDomain, setSelectedDomain] = useState<string>("All Domains (Comprehensive)");
+  const [selectedDifficulty, setSelectedDifficulty] = useState<"Basic" | "Intermediate" | "Advanced">("Intermediate");
+  const [questionCount, setQuestionCount] = useState<number>(10);
+  const [timeLeft, setTimeLeft] = useState(600); // 10 mins
+
+  const domainsList = [
+    {
+      id: "All Domains (Comprehensive)",
+      title: "Comprehensive Cadre Assessment",
+      desc: "Holistic evaluation across Statistical, Technical, Digital Governance, and Behavioural domains.",
+      icon: "🏛️",
+      accent: "from-blue-600 to-indigo-700",
+    },
+    {
+      id: "Statistical",
+      title: "Statistical Methodologies",
+      desc: "SNA 2008 GVA, Two-Stage PLFS Sampling, CPI/WPI Compilation, and SDG Indicators.",
+      icon: "📊",
+      accent: "from-emerald-600 to-teal-700",
+    },
+    {
+      id: "Technical",
+      title: "Data Science & Computing",
+      desc: "Python/R Microdata Parsing, Multipliers, SQLite Data Warehouses, and QGIS.",
+      icon: "💻",
+      accent: "from-purple-600 to-indigo-700",
+    },
+    {
+      id: "Digital Governance",
+      title: "Digital Governance & Privacy",
+      desc: "DPDP Act 2023, Statistical Disclosure Control, and Cybersecurity protocols.",
+      icon: "🔒",
+      accent: "from-amber-500 to-orange-600",
+    },
+    {
+      id: "Behavioural",
+      title: "Ethics & Public Policy",
+      desc: "UNFPOS Principles, Executive Leadership, and Evidence-Based Policy Making.",
+      icon: "⚖️",
+      accent: "from-rose-600 to-pink-700",
+    },
+  ];
 
   async function handleStart() {
     setLoading(true);
     try {
-      const res = await generateMCQsFromText("Statistical & Technical Competencies", 10, "Intermediate", "Statistical");
+      const domainParam = selectedDomain.includes("All") ? "Statistical" : selectedDomain;
+      const res = await generateMCQsFromText(
+        `${selectedDomain} Official Assessment for ${profile.cadreGrade || "Statistical Officer"}`,
+        questionCount,
+        selectedDifficulty,
+        domainParam
+      );
       setQuestions(res.questions);
       setAnswers(new Array(res.questions.length).fill(null));
+      setFlagged(new Array(res.questions.length).fill(false));
+      setTimeLeft(questionCount * 90); // 1.5 mins per question
       setStarted(true);
-    } catch {
-      // Fallback handled in aiService
+    } catch (e) {
+      console.warn("Assessment generation fallback:", e);
     } finally {
       setLoading(false);
     }
@@ -2067,112 +2118,304 @@ function AssessmentScreen({
 
   // Auto-submit when time is up
   useEffect(() => {
-    if (started && timeLeft === 0) {
-      onFinish(questions, answers);
+    if (started && timeLeft === 0 && questions.length > 0) {
+      onFinish(questions, answers, selectedDomain);
     }
-  }, [started, timeLeft, onFinish, questions, answers]);
+  }, [started, timeLeft, onFinish, questions, answers, selectedDomain]);
 
   if (started && questions.length > 0) {
     const currQ = questions[qIdx];
     const isLast = qIdx === questions.length - 1;
     const mins = Math.floor(timeLeft / 60);
     const secs = timeLeft % 60;
+    const answeredCount = answers.filter((a) => a !== null).length;
 
     return (
-      <div className="max-w-3xl mx-auto space-y-6">
-        <div className="flex justify-between items-center text-xs font-bold text-gray-500 bg-white p-4 rounded-2xl border border-gray-100 shadow-2xs">
-          <span>Question {qIdx + 1} of {questions.length}</span>
-          <span className="text-rose-600 font-mono">⏱️ {mins}:{secs < 10 ? `0${secs}` : secs}</span>
-          <span className="text-[#FF7A00]">{currQ.competencyTarget}</span>
-        </div>
-
-        <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm space-y-6">
-          <h2 className="text-base font-bold text-[#0B3D66] leading-relaxed">{currQ.question}</h2>
-
-          <div className="space-y-2.5">
-            {currQ.options.map((opt, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  const copy = [...answers];
-                  copy[qIdx] = i;
-                  setAnswers(copy);
-                }}
-                className={`w-full p-4 rounded-xl border text-left text-xs transition-all flex items-center gap-3 ${
-                  answers[qIdx] === i
-                    ? "border-[#0B3D66] bg-blue-50 text-[#0B3D66] font-bold"
-                    : "border-gray-200 text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold ${answers[qIdx] === i ? "bg-[#0B3D66] text-white" : "bg-gray-100 text-gray-500"}`}>
-                  {String.fromCharCode(65 + i)}
-                </span>
-                <span>{opt}</span>
-              </button>
-            ))}
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Top Assessment Header */}
+        <div className="bg-white p-4 rounded-3xl border border-gray-100 shadow-2xs flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <span className="text-xl">✍️</span>
+            <div>
+              <div className="text-xs font-bold text-[#0B3D66]">{selectedDomain} Assessment</div>
+              <div className="text-[10px] text-gray-500">
+                {answeredCount} of {questions.length} Answered · Difficulty: {currQ.difficulty}
+              </div>
+            </div>
           </div>
 
-          <div className="flex justify-between items-center pt-4 border-t border-gray-100">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                const copy = [...flagged];
+                copy[qIdx] = !copy[qIdx];
+                setFlagged(copy);
+              }}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                flagged[qIdx]
+                  ? "bg-amber-100 text-amber-900 border border-amber-300"
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              }`}
+            >
+              <span>{flagged[qIdx] ? "🚩" : "🏳️"}</span>
+              <span>{flagged[qIdx] ? "Flagged" : "Flag"}</span>
+            </button>
+
+            <div className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 font-mono font-bold text-xs">
+              <span>⏱️</span>
+              <span>{mins}:{secs < 10 ? `0${secs}` : secs}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Question Palette Navigation Bar */}
+        <div className="bg-white p-3 rounded-2xl border border-gray-100 shadow-2xs flex items-center gap-2 overflow-x-auto">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider shrink-0 pl-1">
+            Questions:
+          </span>
+          <div className="flex items-center gap-1.5 flex-1">
+            {questions.map((_, i) => {
+              const isAnswered = answers[i] !== null;
+              const isCurrent = qIdx === i;
+              const isFlag = flagged[i];
+
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setQIdx(i)}
+                  className={`w-7 h-7 rounded-lg text-xs font-bold flex items-center justify-center transition-all cursor-pointer shrink-0 ${
+                    isCurrent
+                      ? "ring-2 ring-[#0B3D66] bg-[#0B3D66] text-white shadow-xs"
+                      : isFlag
+                      ? "bg-amber-100 text-amber-900 border border-amber-400"
+                      : isAnswered
+                      ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  }`}
+                >
+                  {i + 1}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Question Content Box */}
+        <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm space-y-6">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-100">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-900 px-2.5 py-0.5 rounded-full">
+              {currQ.competencyTarget || currQ.domain}
+            </span>
+            <span className="text-xs text-gray-400 font-semibold">
+              Question {qIdx + 1} / {questions.length}
+            </span>
+          </div>
+
+          <h2 className="text-sm sm:text-base font-bold text-[#0B3D66] leading-relaxed">
+            {currQ.question}
+          </h2>
+
+          <div className="space-y-3">
+            {currQ.options.map((opt, i) => {
+              const isSelected = answers[qIdx] === i;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => {
+                    const copy = [...answers];
+                    copy[qIdx] = i;
+                    setAnswers(copy);
+                  }}
+                  className={`w-full p-4 rounded-2xl border text-left text-xs transition-all flex items-start gap-3 cursor-pointer select-none ${
+                    isSelected
+                      ? "border-[#0B3D66] bg-blue-50/80 text-[#0B3D66] font-bold shadow-xs ring-1 ring-[#0B3D66]"
+                      : "border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50/50"
+                  }`}
+                >
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5 ${
+                      isSelected ? "bg-[#0B3D66] text-white" : "bg-gray-100 text-gray-500"
+                    }`}
+                  >
+                    {String.fromCharCode(65 + i)}
+                  </span>
+                  <span className="leading-relaxed">{opt}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Bottom Actions */}
+          <div className="flex justify-between items-center pt-6 border-t border-gray-100">
             <button
               onClick={() => setQIdx((p) => Math.max(0, p - 1))}
               disabled={qIdx === 0}
-              className="text-xs font-bold text-gray-500 disabled:opacity-30"
+              className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-900 disabled:opacity-30 cursor-pointer"
             >
               ← Previous
             </button>
-            {isLast ? (
-              <button
-                onClick={() => onFinish(questions, answers)}
-                className="px-6 py-2.5 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00] shadow-md"
-              >
-                Submit Assessment →
-              </button>
-            ) : (
-              <button
-                onClick={() => setQIdx((p) => Math.min(questions.length - 1, p + 1))}
-                className="px-5 py-2.5 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f]"
-              >
-                Next Question →
-              </button>
-            )}
+
+            <div className="flex items-center gap-2">
+              {isLast ? (
+                <button
+                  onClick={() => onFinish(questions, answers, selectedDomain)}
+                  className="px-6 py-2.5 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Submit Examination</span>
+                  <span>✓</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => setQIdx((p) => Math.min(questions.length - 1, p + 1))}
+                  className="px-5 py-2.5 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+                >
+                  <span>Next Question</span>
+                  <span>→</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
     );
   }
 
+  // Pre-Assessment Configuration Screen
   return (
-    <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border border-gray-100 shadow-sm text-center space-y-6">
-      <div className="w-14 h-14 rounded-2xl bg-orange-50 text-[#FF7A00] flex items-center justify-center text-3xl font-bold mx-auto">
-        ✍️
-      </div>
-      <div>
-        <h1 className="text-xl font-bold text-[#0B3D66] font-serif">Competency Assessment</h1>
-        <p className="text-xs text-gray-500 mt-1">
-          Objective evaluation covering Statistical Methodologies, Python Microdata, and Data Privacy.
-        </p>
-      </div>
+    <div className="max-w-4xl mx-auto space-y-6">
+      <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm space-y-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-gray-100">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-orange-50 text-[#FF7A00] flex items-center justify-center text-2xl font-bold shrink-0">
+              ✍️
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-[#0B3D66] font-serif">Official Competency Assessment</h1>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Standardized diagnostic assessment calibrated against Indian Statistical Service cadre requirements.
+              </p>
+            </div>
+          </div>
+          <div className="text-[10px] font-extrabold uppercase px-3 py-1 bg-blue-50 text-blue-800 rounded-full border border-blue-200">
+            Cadre: {profile.cadreGrade || "STS"}
+          </div>
+        </div>
 
-      <div className="p-4 bg-gray-50 rounded-2xl text-xs text-gray-600 text-left space-y-2">
-        <div>• <strong>Duration:</strong> 15 minutes</div>
-        <div>• <strong>Questions:</strong> 10 Objective MCQs</div>
-        <div>• <strong>Competencies Assessed:</strong> 6 Key Areas</div>
-        <div>• <strong>Closed-Loop Effect:</strong> Scores will directly update your cadre competency profile.</div>
-      </div>
+        {/* 1. Track Selection */}
+        <div className="space-y-3">
+          <label className="block text-xs font-bold text-[#0B3D66] uppercase tracking-wider">
+            1. Select Assessment Domain Track
+          </label>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {domainsList.map((d) => {
+              const isSelected = selectedDomain === d.id;
+              return (
+                <button
+                  key={d.id}
+                  type="button"
+                  onClick={() => setSelectedDomain(d.id)}
+                  className={`p-4 rounded-2xl border text-left transition-all cursor-pointer flex items-start gap-3.5 ${
+                    isSelected
+                      ? "border-[#0B3D66] bg-blue-50/70 shadow-xs ring-1 ring-[#0B3D66]"
+                      : "border-gray-200 hover:border-gray-300 hover:bg-gray-50/50"
+                  }`}
+                >
+                  <span className="text-2xl shrink-0">{d.icon}</span>
+                  <div className="min-w-0">
+                    <div className={`text-xs font-bold ${isSelected ? "text-[#0B3D66]" : "text-gray-900"}`}>
+                      {d.title}
+                    </div>
+                    <p className="text-[11px] text-gray-500 mt-0.5 line-clamp-2 leading-relaxed">{d.desc}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-      <button
-        onClick={handleStart}
-        disabled={loading}
-        className="w-full py-3 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] shadow-md transition-all cursor-pointer disabled:opacity-50"
-      >
-        {loading ? "Preparing Examination Questions..." : "Start Assessment Now →"}
-      </button>
+        {/* 2. Parameters */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">2. Difficulty Level</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(["Basic", "Intermediate", "Advanced"] as const).map((diff) => (
+                <button
+                  key={diff}
+                  type="button"
+                  onClick={() => setSelectedDifficulty(diff)}
+                  className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                    selectedDifficulty === diff
+                      ? "bg-[#0B3D66] text-white border-[#0B3D66] shadow-xs"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  {diff}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-700 mb-1.5">3. Examination Size</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { val: 5, label: "5 MCQs (Express · 7m)" },
+                { val: 10, label: "10 MCQs (Standard · 15m)" },
+              ].map((cnt) => (
+                <button
+                  key={cnt.val}
+                  type="button"
+                  onClick={() => setQuestionCount(cnt.val)}
+                  className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                    questionCount === cnt.val
+                      ? "bg-[#0B3D66] text-white border-[#0B3D66] shadow-xs"
+                      : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                  }`}
+                >
+                  {cnt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Closed-Loop Notification */}
+        <div className="p-4 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-xs text-emerald-900 space-y-1">
+          <div className="font-bold flex items-center gap-1.5">
+            <span>🔄</span>
+            <span>Closed-Loop Competency Elevation Protocol</span>
+          </div>
+          <p className="text-[11px] text-emerald-800 leading-relaxed">
+            Scoring <strong>≥ 80%</strong> on any evaluated competency elevates your official competency level by <strong>+1 level</strong>, reduces your priority skill gaps, and records a verified ledger entry in the MoSPI Capacity Log.
+          </p>
+        </div>
+
+        <button
+          onClick={handleStart}
+          disabled={loading}
+          className="w-full py-3.5 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-2xl shadow-md transition-all cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {loading ? (
+            <>
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              <span>Generating Calibrated Examination Questions...</span>
+            </>
+          ) : (
+            <>
+              <span>Begin Official Assessment Now</span>
+              <span>→</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }
 
 // ──────────────────────────────────────────────
-// 6. Assessment Result Screen
+// 6. Assessment Result Screen with Multi-Competency Closed-Loop Updates
 // ──────────────────────────────────────────────
 
 function AssessmentResultScreen({
@@ -2187,42 +2430,223 @@ function AssessmentResultScreen({
   const correctCount = questions.reduce((acc, q, idx) => acc + (answers[idx] === q.answer ? 1 : 0), 0);
   const total = questions.length || 1;
   const scorePct = Math.round((correctCount / total) * 100);
+  const [reviewFilter, setReviewFilter] = useState<"all" | "correct" | "incorrect">("all");
+  const [appliedUpdates, setAppliedUpdates] = useState<{ comp: string; oldL: number; newL: number; success: boolean }[] | null>(null);
 
-  function handleApply() {
-    const compName = questions[0]?.competencyTarget || "General Competency";
-    applyClosedLoopCompetencyUpdate({
-      competencyName: compName,
-      scorePct,
-      evidence: `StatSkill AI Assessment (${scorePct}% Score)`,
+  // Group performance by competency
+  const competencyBreakdown = useMemo(() => {
+    const map: Record<string, { total: number; correct: number; domain: string }> = {};
+    questions.forEach((q, idx) => {
+      const comp = q.competencyTarget || "General Competency";
+      if (!map[comp]) {
+        map[comp] = { total: 0, correct: 0, domain: q.domain };
+      }
+      map[comp].total += 1;
+      if (answers[idx] === q.answer) {
+        map[comp].correct += 1;
+      }
     });
-    onNav("dashboard");
+    return map;
+  }, [questions, answers]);
+
+  function handleApplyClosedLoop() {
+    const results: { comp: string; oldL: number; newL: number; success: boolean }[] = [];
+
+    Object.entries(competencyBreakdown).forEach(([comp, stats]) => {
+      const compScorePct = Math.round((stats.correct / stats.total) * 100);
+      const res = applyClosedLoopCompetencyUpdate({
+        competencyName: comp,
+        scorePct: compScorePct,
+        evidence: `StatSkill AI Assessment (${compScorePct}% Score in ${stats.correct}/${stats.total} items)`,
+      });
+      if (res.updated) {
+        results.push({ comp, oldL: res.oldLevel, newL: res.newLevel, success: true });
+      }
+    });
+
+    setAppliedUpdates(results);
   }
 
+  const filteredQuestions = questions.map((q, idx) => ({ q, idx, isCorrect: answers[idx] === q.answer })).filter((item) => {
+    if (reviewFilter === "correct") return item.isCorrect;
+    if (reviewFilter === "incorrect") return !item.isCorrect;
+    return true;
+  });
+
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-sm text-center space-y-4">
-        <div className="w-20 h-20 rounded-full bg-emerald-600 text-white flex flex-col items-center justify-center font-bold mx-auto shadow-md">
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Top Banner */}
+      <div className="bg-white rounded-3xl p-6 md:p-8 border border-gray-100 shadow-sm text-center space-y-4">
+        <div
+          className={`w-20 h-20 rounded-full text-white flex flex-col items-center justify-center font-bold mx-auto shadow-md ${
+            scorePct >= 80 ? "bg-emerald-600" : scorePct >= 60 ? "bg-[#0B3D66]" : "bg-amber-600"
+          }`}
+        >
           <span className="text-2xl font-serif">{scorePct}%</span>
-          <span className="text-[9px] uppercase">Evaluated</span>
+          <span className="text-[9px] uppercase">
+            {scorePct >= 80 ? "Mastery" : scorePct >= 60 ? "Proficient" : "Developing"}
+          </span>
         </div>
-        <h1 className="text-xl font-bold text-[#0B3D66]">Your Competency Assessment Result</h1>
-        <p className="text-xs text-gray-500">
-          You scored <strong>{correctCount} of {total}</strong> correct answers across evaluated domains.
+
+        <h1 className="text-xl font-bold text-[#0B3D66]">Assessment Evaluation Completed</h1>
+        <p className="text-xs text-gray-500 max-w-md mx-auto leading-relaxed">
+          You correctly answered <strong>{correctCount} of {total}</strong> questions across the evaluated official competency areas.
         </p>
 
-        <div className="flex justify-center gap-3 pt-2">
-          <button
-            onClick={handleApply}
-            className="px-6 py-2.5 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00] shadow-md"
-          >
-            Apply Closed-Loop Competency Update →
-          </button>
-          <button
-            onClick={() => onNav("learning_path")}
-            className="px-6 py-2.5 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f]"
-          >
-            View Personalized Learning Path →
-          </button>
+        {appliedUpdates ? (
+          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-200 text-xs text-emerald-900 space-y-2 text-left max-w-lg mx-auto">
+            <div className="font-bold flex items-center gap-1.5">
+              <span>✓</span>
+              <span>Closed-Loop Ledger Updates Successfully Applied:</span>
+            </div>
+            {appliedUpdates.length > 0 ? (
+              <ul className="space-y-1 text-[11px] list-disc list-inside">
+                {appliedUpdates.map((u, i) => (
+                  <li key={i}>
+                    <strong>{u.comp}</strong>: Elevated from Level {u.oldL} → <strong>Level {u.newL}</strong> (+1 Level)
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-[11px] text-gray-600">
+                Competencies evaluated were already at or above assessed mastery threshold. Audit logs updated.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-wrap justify-center gap-3 pt-2">
+            <button
+              onClick={handleApplyClosedLoop}
+              className="px-6 py-2.5 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all"
+            >
+              🔄 Apply Closed-Loop Competency Updates
+            </button>
+            <button
+              onClick={() => onNav("learning_path")}
+              className="px-6 py-2.5 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer transition-all"
+            >
+              View Personalized Learning Path →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Competency Breakdown Cards */}
+      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
+        <h2 className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">
+          Competency Performance Breakdown
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {Object.entries(competencyBreakdown).map(([comp, stats]) => {
+            const pct = Math.round((stats.correct / stats.total) * 100);
+            return (
+              <div key={comp} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/50 space-y-2">
+                <div className="flex justify-between items-start">
+                  <span className="text-xs font-bold text-gray-800 line-clamp-1">{comp}</span>
+                  <span className={`text-[10px] font-extrabold px-2 py-0.5 rounded ${pct >= 80 ? "bg-emerald-100 text-emerald-800" : pct >= 60 ? "bg-blue-100 text-blue-800" : "bg-amber-100 text-amber-800"}`}>
+                    {pct}%
+                  </span>
+                </div>
+                <div className="text-[10px] text-gray-500">
+                  {stats.correct} / {stats.total} correct · {stats.domain}
+                </div>
+                <div className="w-full bg-gray-200 h-1.5 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${pct >= 80 ? "bg-emerald-500" : pct >= 60 ? "bg-[#0B3D66]" : "bg-amber-500"}`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Detailed Question-by-Question Review */}
+      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b border-gray-100 gap-3">
+          <h2 className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">
+            Detailed Examination Item Review ({questions.length} Items)
+          </h2>
+          <div className="flex items-center gap-1.5">
+            {(["all", "incorrect", "correct"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                onClick={() => setReviewFilter(f)}
+                className={`px-3 py-1 rounded-xl text-[11px] font-bold capitalize transition-all cursor-pointer ${
+                  reviewFilter === f
+                    ? "bg-[#0B3D66] text-white"
+                    : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                }`}
+              >
+                {f} ({f === "all" ? questions.length : f === "correct" ? correctCount : total - correctCount})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {filteredQuestions.map(({ q, idx, isCorrect }) => {
+            const officerAns = answers[idx];
+
+            return (
+              <div
+                key={idx}
+                className={`p-5 rounded-2xl border text-xs space-y-3 ${
+                  isCorrect ? "bg-emerald-50/30 border-emerald-200" : "bg-rose-50/30 border-rose-200"
+                }`}
+              >
+                <div className="flex justify-between items-start gap-2">
+                  <div className="font-bold text-gray-900 leading-relaxed">
+                    Q{idx + 1}: {q.question}
+                  </div>
+                  <span
+                    className={`text-[9px] font-extrabold px-2.5 py-0.5 rounded-full shrink-0 ${
+                      isCorrect ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-800"
+                    }`}
+                  >
+                    {isCorrect ? "Correct ✓" : "Incorrect ✕"}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                  {q.options.map((opt, optIdx) => {
+                    const isOfficerPick = officerAns === optIdx;
+                    const isRightAnswer = q.answer === optIdx;
+
+                    return (
+                      <div
+                        key={optIdx}
+                        className={`p-2.5 rounded-xl border flex items-start gap-2 ${
+                          isRightAnswer
+                            ? "bg-emerald-100/70 border-emerald-300 font-bold text-emerald-950"
+                            : isOfficerPick && !isRightAnswer
+                            ? "bg-rose-100/70 border-rose-300 text-rose-950 font-bold"
+                            : "bg-white border-gray-200 text-gray-700"
+                        }`}
+                      >
+                        <span className="w-5 h-5 rounded-full bg-black/10 flex items-center justify-center text-[9px] font-bold shrink-0 mt-0.5">
+                          {String.fromCharCode(65 + optIdx)}
+                        </span>
+                        <span className="leading-snug">{opt}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="p-3 bg-white/80 rounded-xl border border-gray-200/80 text-[11px] text-gray-600 space-y-1">
+                  <div>
+                    <strong className="text-[#0B3D66]">Official Methodology Explanation:</strong>{" "}
+                    {q.explanation}
+                  </div>
+                  <div className="text-[10px] text-gray-400">
+                    Competency Target: <strong className="text-gray-700">{q.competencyTarget || q.domain}</strong> ({q.difficulty})
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
@@ -4775,13 +5199,25 @@ function TrainerScreen() {
             <select
               value={competency}
               onChange={(e) => setCompetency(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66]"
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] font-medium"
             >
-              <option value="Python for Data Analysis">Python for Data Analysis</option>
-              <option value="National Accounts & GVA">National Accounts &amp; GVA</option>
-              <option value="Sampling Theory & PPS">Sampling Theory &amp; PPS</option>
-              <option value="Price Statistics (CPI / WPI)">Price Statistics (CPI / WPI)</option>
-              <option value="Data Privacy (DPDP Act)">Data Privacy (DPDP Act)</option>
+              {DEFAULT_COMPETENCIES_CATALOGUE.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name} ({c.domain})
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Difficulty Calibration</label>
+            <select
+              value={difficulty}
+              onChange={(e) => setDifficulty(e.target.value as any)}
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] font-medium"
+            >
+              <option value="Basic">Basic (Foundational Level 1-2)</option>
+              <option value="Intermediate">Intermediate (Practitioner Level 3-4)</option>
+              <option value="Advanced">Advanced (Expert / Senior ISS Level 5)</option>
             </select>
           </div>
         </div>
@@ -4789,22 +5225,34 @@ function TrainerScreen() {
         <div className="border-2 border-dashed border-gray-200 rounded-2xl p-8 text-center relative bg-gray-50/50 hover:bg-blue-50/30 transition-all">
           <input
             type="file"
-            accept=".pdf,.txt,.docx,.csv"
+            accept=".pdf,.txt,.docx,.csv,.md,.json"
             onChange={handleFileUpload}
             disabled={generating}
-            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+            className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
           />
           <div className="text-3xl mb-2">📄</div>
           <div className="text-xs font-bold text-gray-800">
-            {generating ? "Extracting context and generating MCQs..." : "Upload MoSPI Training Manual or Guidelines (PDF, DOCX, TXT)"}
+            {generating ? (
+              <span className="flex items-center justify-center gap-2 text-[#0B3D66]">
+                <span className="w-4 h-4 border-2 border-[#0B3D66] border-t-transparent rounded-full animate-spin" />
+                <span>Processing Document with In-Browser RAG Engine...</span>
+              </span>
+            ) : (
+              "Upload MoSPI Training Manual, Guidelines, or Syllabus (PDF, DOCX, TXT, CSV, MD)"
+            )}
           </div>
-          <p className="text-[10px] text-gray-400 mt-1">Automatic verification for 4 options, 1 valid answer, and source citations</p>
+          <p className="text-[10px] text-gray-400 mt-1">
+            Grounds questions 100% in document sentences with automated 4-option, 1-valid answer, and citation validation
+          </p>
         </div>
 
         {statusMsg && (
-          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900 font-mono flex items-center justify-between">
-            <span>{statusMsg}</span>
-            <button onClick={() => setStatusMsg(null)} className="text-emerald-700 hover:text-emerald-950 font-bold">✕</button>
+          <div className="p-3.5 bg-blue-50/80 rounded-2xl border border-blue-200 text-xs text-blue-950 font-sans flex items-center justify-between shadow-2xs">
+            <div className="flex items-center gap-2">
+              <span>ℹ️</span>
+              <span>{statusMsg}</span>
+            </div>
+            <button onClick={() => setStatusMsg(null)} className="text-blue-700 hover:text-blue-950 font-bold cursor-pointer p-1">✕</button>
           </div>
         )}
       </div>
