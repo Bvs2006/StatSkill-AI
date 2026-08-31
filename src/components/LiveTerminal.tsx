@@ -24,8 +24,8 @@ export const OFFICIAL_LAB_EXERCISES: LabExercise[] = [
     difficulty: "Intermediate",
     instructions: "Write a script to compute the all-India weighted Consumer Price Index (CPI) using the Modified Laspeyres Index formula over 6 commodity groups.",
     initialCode: `# Official Statistics Lab: CPI Compilation
-# Problem: Compute the all-India weighted Consumer Price Index (CPI) using the Modified Laspeyres Index.
-# Formula: CPI = sum(Weight_i * (Current_Price_i / Base_Price_i)) / sum(Weight_i) * 100
+# Instructions: Compute the all-India weighted Consumer Price Index (CPI)
+# and Year-over-Year inflation rate across the 6 commodity groups.
 
 commodity_groups = [
     {"name": "Food & Beverages", "weight": 45.86, "base_price": 100.0, "current_price": 118.50},
@@ -36,30 +36,20 @@ commodity_groups = [
     {"name": "Miscellaneous", "weight": 28.32, "base_price": 100.0, "current_price": 116.80},
 ]
 
-# TODO: 1. Calculate sum of weighted price relatives across all commodity groups
-# Formula component: item["weight"] * (item["current_price"] / item["base_price"])
-total_weighted_relatives = 0.0
-
-# TODO: 2. Calculate total base basket weight (sum of all group weights)
-total_weight = 0.0
-
-# TODO: 3. Calculate cpi_combined = (total_weighted_relatives / total_weight) * 100
-cpi_combined = 0.0
-
-# TODO: 4. Calculate inflation_rate = cpi_combined - 100.0
-inflation_rate = 0.0
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR CODE BELOW TO CALCULATE total_weight, cpi_combined, AND inflation_rate ---
 
 
 
-# Print summary report
+# Output Report
 print("═══════════════════════════════════════════════════")
 print("  NATIONAL CONSUMER PRICE INDEX (CPI) COMPILATION  ")
 print("═══════════════════════════════════════════════════")
-print(f"Total Base Basket Weight : {total_weight:.2f}")
-print(f"Current Period CPI Index : {cpi_combined:.2f}")
-print(f"Year-over-Year Inflation : {inflation_rate:.2f}%")
+try:
+    print(f"Total Base Basket Weight : {total_weight:.2f}")
+    print(f"Current Period CPI Index : {cpi_combined:.2f}")
+    print(f"Year-over-Year Inflation : {inflation_rate:.2f}%")
+except NameError as e:
+    print(f"⚠️ Calculation Error: Variable not defined ({e}). Complete the calculations above.")
 `,
     solutionCode: `# Official Statistics Lab: CPI Compilation
 commodity_groups = [
@@ -104,7 +94,8 @@ Miscellaneous,28.32,100.00,116.80`,
     difficulty: "Advanced",
     instructions: "Write Python code to apply NSSO sampling multipliers (effective weight = multiplier / 100.0) to estimate total rural employed population from sample records.",
     initialCode: `# PLFS Microdata Estimation Lab
-# Problem: Calculate weighted population estimates using sampling multipliers.
+# Instructions: Calculate estimated total employed population and stratum totals
+# using the NSSO sampling multipliers for each household record.
 
 sample_records = [
     {"hh_id": "01001", "stratum": "Rural-Punjab", "multiplier": 24000, "employed_count": 3},
@@ -114,25 +105,21 @@ sample_records = [
     {"hh_id": "03001", "stratum": "Rural-Bihar",  "multiplier": 32000, "employed_count": 5},
 ]
 
-estimated_total_employed = 0
-stratum_estimates = {}
-
-# TODO: 1. Loop through each record in sample_records
-# TODO: 2. Compute effective_weight = rec["multiplier"] / 100.0
-# TODO: 3. Compute hh_employed = rec["employed_count"] * effective_weight
-# TODO: 4. Accumulate into estimated_total_employed and stratum_estimates dictionary
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR CODE BELOW TO POPULATE estimated_total_employed AND stratum_estimates ---
 
 
 
+# Output Report
 print("┌─────────────────────────────────────────────────┐")
 print("│    PLFS SUB-SAMPLE AGGREGATION & ESTIMATION     │")
 print("└─────────────────────────────────────────────────┘")
-for st, count in stratum_estimates.items():
-    print(f"• Stratum {st:15s}: {count:,.0f} persons")
-print("───────────────────────────────────────────────────")
-print(f"Total Estimated Employed Population: {estimated_total_employed:,.0f}")
+try:
+    for st, count in stratum_estimates.items():
+        print(f"• Stratum {st:15s}: {count:,.0f} persons")
+    print("───────────────────────────────────────────────────")
+    print(f"Total Estimated Employed Population: {estimated_total_employed:,.0f}")
+except NameError as e:
+    print(f"⚠️ Calculation Error: Variable not defined ({e}). Complete the calculations above.")
 `,
     solutionCode: `# PLFS Microdata Estimation Lab
 sample_records = [
@@ -176,17 +163,12 @@ print(f"Total Estimated Employed Population: {estimated_total_employed:,.0f}")
     domain: "Database Management & Big Data",
     language: "sql",
     difficulty: "Basic",
-    instructions: "Write a SQL query over National_Statistical_Registry to select State_Code, Sector, Commodity_Grp, Weight_Share, and Index_Value where Weight_Share > 5.0, ordered by Index_Value descending.",
+    instructions: "Write a SQL query over Price_Series_2026 to select State_Code, Sector, Commodity_Grp, Weight_Share, and Index_Value where Weight_Share > 5.0, ordered by Index_Value descending.",
     initialCode: `-- Official SQL Lab: Administrative Enterprise Registry
--- Problem: Query official price series to find high-impact statistical drivers.
--- 
--- Requirements:
--- 1. Select State_Code, Sector, Commodity_Grp, Weight_Share, and Index_Value
--- 2. From table: Price_Series_2026
--- 3. Filter where Weight_Share > 5.0
--- 4. Order by Index_Value DESC
+-- Instructions: Query the Price_Series_2026 table to extract key statistical drivers.
+-- Table Columns: State_Code, Sector, Commodity_Grp, Weight_Share, Index_Value
 
--- --- WRITE YOUR SQL QUERY BELOW ---
+-- Write your SQL query below:
 
 
 `,
@@ -221,8 +203,8 @@ ORDER BY
     difficulty: "Intermediate",
     instructions: "Write Python code to compute Sectoral Real Gross Value Added (GVA) at Constant Prices using Implicit Price Deflators (IPD).",
     initialCode: `# National Accounts Division (NAD) GVA Deflation Lab
-# Problem: Compute Sectoral Real GVA using Implicit Price Deflators (IPD).
-# Formula: Real GVA = (Nominal GVA / IPD_Deflator) * 100
+# Instructions: Compute Sectoral Real GVA at constant prices for each sector,
+# total nominal GVA, total real GVA, and the overall economy implicit price deflator.
 
 sectors = [
     {"sector": "Agriculture & Allied", "nominal_cr": 3842100, "deflator": 159.39},
@@ -231,24 +213,20 @@ sectors = [
     {"sector": "Services & Trade", "nominal_cr": 4980200, "deflator": 140.67},
 ]
 
-total_nominal = 0
-total_real = 0
-overall_deflator = 0.0
-
-# TODO: 1. Iterate over sectors and calculate real_gva = (s["nominal_cr"] / s["deflator"]) * 100.0
-# TODO: 2. Sum nominal and real amounts
-# TODO: 3. Compute overall economy deflator = (total_nominal / total_real) * 100.0
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR CODE BELOW TO CALCULATE total_nominal, total_real, AND overall_deflator ---
 
 
 
+# Output Report
 print("═══════════════════════════════════════════════════")
 print("  NATIONAL ACCOUNTS SECTORAL REAL GVA (2011-12 BASE) ")
 print("═══════════════════════════════════════════════════")
-print(f"Total Nominal GVA : ₹{total_nominal:,.0f} Crore")
-print(f"Total Real GVA    : ₹{total_real:,.0f} Crore")
-print(f"Overall Economy Implicit Deflator : {overall_deflator:.2f}")
+try:
+    print(f"Total Nominal GVA : ₹{total_nominal:,.0f} Crore")
+    print(f"Total Real GVA    : ₹{total_real:,.0f} Crore")
+    print(f"Overall Economy Implicit Deflator : {overall_deflator:.2f}")
+except NameError as e:
+    print(f"⚠️ Calculation Error: Variable not defined ({e}). Complete the calculations above.")
 `,
     solutionCode: `# National Accounts Division (NAD) GVA Deflation Lab
 sectors = [
@@ -293,7 +271,8 @@ Services & Trade,4980200,140.67,2011-12`,
     difficulty: "Advanced",
     instructions: "Write a script to compute equivalence class sizes across (district, age_bracket, gender) and check if k-anonymity (k >= 3) is satisfied.",
     initialCode: `# DPDP Act 2023 Microdata Privacy Lab: k-Anonymity Verification
-# Problem: Count frequencies of quasi-identifier combinations and evaluate k-anonymity compliance.
+# Instructions: Group the microdata records by quasi-identifiers (district, age_bracket, gender),
+# calculate the minimum equivalence class size (k_value), and evaluate if is_compliant (k >= 3).
 
 microdata = [
     {"id": 101, "district": "2701", "age_bracket": "25-34", "gender": "F", "diagnosis": "Hypertension"},
@@ -304,28 +283,22 @@ microdata = [
     {"id": 106, "district": "2702", "age_bracket": "45-54", "gender": "M", "diagnosis": "Hypertension"},
 ]
 
-equivalence_classes = {}
-k_value = 0
-is_compliant = False
-
-# TODO: 1. Loop through microdata and construct key: f"{rec['district']}_{rec['age_bracket']}_{rec['gender']}"
-# TODO: 2. Count occurrences of each key in equivalence_classes dictionary
-# TODO: 3. Calculate k_value = min(equivalence_classes.values()) if equivalence_classes else 0
-# TODO: 4. Set is_compliant = k_value >= 3
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR CODE BELOW TO POPULATE equivalence_classes, k_value, AND is_compliant ---
 
 
 
+# Output Report
 print("═══════════════════════════════════════════════════")
 print("  STATISTICAL DISCLOSURE CONTROL (SDC) AUDIT       ")
 print("═══════════════════════════════════════════════════")
-for eq_class, count in equivalence_classes.items():
-    print(f"• Equivalence Class [{eq_class}]: {count} records")
-
-print("───────────────────────────────────────────────────")
-print(f"Achieved k-Anonymity Value : k = {k_value}")
-print(f"DPDP Act Public Release Status : {'COMPLIANT (APPROVED)' if is_compliant else 'NON-COMPLIANT (REQUIRES SUPPRESSION)'}")
+try:
+    for eq_class, count in equivalence_classes.items():
+        print(f"• Equivalence Class [{eq_class}]: {count} records")
+    print("───────────────────────────────────────────────────")
+    print(f"Achieved k-Anonymity Value : k = {k_value}")
+    print(f"DPDP Act Public Release Status : {'COMPLIANT (APPROVED)' if is_compliant else 'NON-COMPLIANT (REQUIRES SUPPRESSION)'}")
+except NameError as e:
+    print(f"⚠️ Calculation Error: Variable not defined ({e}). Complete the calculations above.")
 `,
     solutionCode: `# DPDP Act 2023 Microdata Privacy Lab: k-Anonymity Verification
 microdata = [
@@ -373,7 +346,8 @@ print(f"DPDP Act Public Release Status : {'COMPLIANT (APPROVED)' if is_compliant
     difficulty: "Intermediate",
     instructions: "Compute the elementary price index for primary food articles using the Jevons Geometric Mean formula across mandi quotation centers.",
     initialCode: `# WPI Price Statistics Lab: Jevons Geometric Mean Elementary Index
-# Formula: Jevons Index = (product(P_t / P_0)) ** (1 / N) * 100
+# Instructions: Calculate the Jevons Geometric Mean Index and Dutot Arithmetic Mean Index
+# across the mandi quotation centers.
 
 import math
 
@@ -385,24 +359,21 @@ mandi_quotations = [
     {"center": "Hapur Mandi (UP)", "item": "Wheat Grade A", "base_price": 2050.0, "current_price": 2410.0},
 ]
 
-jevons_index = 0.0
-dutot_index = 0.0
-
-# TODO: 1. Calculate price relatives (current_price / base_price) for each mandi center
-# TODO: 2. Calculate Jevons Index = (product of all relatives) ** (1 / len(mandi_quotations)) * 100
-# TODO: 3. Calculate Dutot Index = (sum(current_price) / sum(base_price)) * 100
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR CODE BELOW TO CALCULATE jevons_index AND dutot_index ---
 
 
 
+# Output Report
 print("═══════════════════════════════════════════════════")
 print("   WPI ELEMENTARY PRICE INDEX COMPILATION (WHEAT)  ")
 print("═══════════════════════════════════════════════════")
-print(f"Total Mandi Quotation Centers : {len(mandi_quotations)}")
-print(f"Jevons Geometric Mean Index   : {jevons_index:.2f}")
-print(f"Dutot Arithmetic Mean Index   : {dutot_index:.2f}")
-print(f"Formula Divergence            : {abs(dutot_index - jevons_index):.3f} pts")
+try:
+    print(f"Total Mandi Quotation Centers : {len(mandi_quotations)}")
+    print(f"Jevons Geometric Mean Index   : {jevons_index:.2f}")
+    print(f"Dutot Arithmetic Mean Index   : {dutot_index:.2f}")
+    print(f"Formula Divergence            : {abs(dutot_index - jevons_index):.3f} pts")
+except NameError as e:
+    print(f"⚠️ Calculation Error: Variable not defined ({e}). Complete the calculations above.")
 `,
     solutionCode: `# WPI Price Statistics Lab: Jevons Geometric Mean Elementary Index
 import math
@@ -449,11 +420,8 @@ Hapur Mandi,Wheat Grade A,2050.00,2410.00`,
     difficulty: "Basic",
     instructions: "Write a script to compute the Labour Force Participation Rate (LFPR), Worker Population Ratio (WPR), and Unemployment Rate (UR) for Principal Status from survey sample data.",
     initialCode: `# PLFS Labour Statistics Lab: Key Indicator Compilation
-# Definitions (MoSPI Standards):
-# Labour Force = Employed + Unemployed
-# LFPR (%) = (Labour Force / Total Survey Population) * 100
-# WPR (%)  = (Total Employed / Total Survey Population) * 100
-# UR (%)   = (Total Unemployed / Labour Force) * 100
+# Instructions: Calculate Labour Force Participation Rate (LFPR), Worker Population Ratio (WPR),
+# and Unemployment Rate (UR) from the survey demographic sample.
 
 population_sample = {
     "total_population": 50000,
@@ -462,23 +430,20 @@ population_sample = {
     "out_of_labour_force": 24000
 }
 
-lfpr = 0.0
-wpr = 0.0
-ur = 0.0
-
-# TODO: 1. Calculate labour_force = employed + unemployed
-# TODO: 2. Calculate lfpr, wpr, and ur according to official formulas
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR CODE BELOW TO CALCULATE lfpr, wpr, AND ur ---
 
 
 
+# Output Report
 print("═══════════════════════════════════════════════════")
 print("     PLFS KEY LABOUR MARKET INDICATORS REPORT      ")
 print("═══════════════════════════════════════════════════")
-print(f"Labour Force Participation Rate (LFPR) : {lfpr:.2f}%")
-print(f"Worker Population Ratio (WPR)          : {wpr:.2f}%")
-print(f"Unemployment Rate (UR)                 : {ur:.2f}%")
+try:
+    print(f"Labour Force Participation Rate (LFPR) : {lfpr:.2f}%")
+    print(f"Worker Population Ratio (WPR)          : {wpr:.2f}%")
+    print(f"Unemployment Rate (UR)                 : {ur:.2f}%")
+except NameError as e:
+    print(f"⚠️ Calculation Error: Variable not defined ({e}). Complete the calculations above.")
 `,
     solutionCode: `# PLFS Labour Statistics Lab: Key Indicator Compilation
 population_sample = {
@@ -519,18 +484,11 @@ Out of Labour Force (Students/Elderly),24000,48.0%`,
     difficulty: "Intermediate",
     instructions: "Write a SQL query over ASI_Factory_Registry to compute Total_Gross_Output, Total_Inputs, and Gross_Value_Added (Gross_Output - Total_Inputs) grouped by State_Code where Factory_Status = 'Operational'.",
     initialCode: `-- Official SQL Lab: Annual Survey of Industries (ASI)
--- Problem: Calculate Gross Value Added (GVA = Gross_Output - Total_Inputs) by State.
+-- Instructions: Calculate Gross Value Added (GVA = Output - Inputs) grouped by State_Code
+-- for all operational factory records, ordered by GVA in descending order.
 -- Table: ASI_Establishments_2026
--- Columns: State_Code, Gross_Output_Lakhs, Total_Inputs_Lakhs, Factory_Status
 
--- Requirements:
--- 1. SELECT State_Code, SUM(Gross_Output_Lakhs) as Total_Output, SUM(Total_Inputs_Lakhs) as Total_Inputs, (SUM(Gross_Output_Lakhs) - SUM(Total_Inputs_Lakhs)) as GVA_Lakhs
--- 2. FROM ASI_Establishments_2026
--- 3. WHERE Factory_Status = 'Operational'
--- 4. GROUP BY State_Code
--- 5. ORDER BY GVA_Lakhs DESC
-
--- --- WRITE YOUR SQL QUERY BELOW ---
+-- Write your SQL query below:
 
 
 `,
@@ -565,11 +523,12 @@ F1006,27 (MAH),13 (Textiles),3400.00,2300.00,Operational`,
     difficulty: "Advanced",
     instructions: "Write a script to perform 1 iteration of the RAS biproportional matrix balancing algorithm to adjust intermediate input cells to match updated row and column target totals.",
     initialCode: `# UN SNA 2008 National Accounts Lab: SUT Matrix Balancing (RAS)
-# Problem: Balance a 2x2 Intermediate Consumption Matrix to target row sums and col sums.
+# Instructions: Perform 1 iteration of biproportional matrix scaling (RAS) on matrix A
+# to scale rows to target_row_sums, then scale columns to target_col_sums.
 
 import numpy as np
 
-# Initial Intermediate Matrix A0
+# Initial Intermediate Matrix A
 A = np.array([
     [100.0, 200.0],  # Sector 1 (Agriculture)
     [300.0, 400.0]   # Sector 2 (Industry)
@@ -578,22 +537,21 @@ A = np.array([
 target_row_sums = np.array([330.0, 770.0]) # Target Gross Intermediate Output
 target_col_sums = np.array([420.0, 680.0]) # Target Intermediate Input Consumption
 
-# TODO: 1. Row Scaling Step (r = target_row_sums / current_row_sums)
-# TODO: 2. Multiply each row i of A by r[i]
-# TODO: 3. Column Scaling Step (s = target_col_sums / current_col_sums)
-# TODO: 4. Multiply each col j of A by s[j]
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR PYTHON CODE BELOW TO UPDATE MATRIX A VIA RAS SCALING ---
 
 
 
+# Output Report
 print("═══════════════════════════════════════════════════")
 print("   SUT 2008 RAS BALANCED INTERMEDIATE MATRIX       ")
 print("═══════════════════════════════════════════════════")
-print("Balanced Matrix A1:")
-print(A)
-print(f"Resulting Row Sums : {A.sum(axis=1)}")
-print(f"Resulting Col Sums : {A.sum(axis=0)}")
+try:
+    print("Balanced Matrix A1:")
+    print(np.round(A, 2))
+    print(f"Resulting Row Sums : {np.round(A.sum(axis=1), 2)}")
+    print(f"Resulting Col Sums : {np.round(A.sum(axis=0), 2)}")
+except Exception as e:
+    print(f"⚠️ Execution Error: {e}")
 `,
     solutionCode: `# UN SNA 2008 National Accounts Lab: SUT Matrix Balancing (RAS)
 import numpy as np
@@ -638,10 +596,9 @@ Target_Input,420.00,680.00,1100.00`,
     difficulty: "Intermediate",
     instructions: "Write a script to compute household density per hectare for Urban Frame Survey (UFS) blocks and classify blocks into Sampling Strata based on density thresholds.",
     initialCode: `# UFS Geospatial Division Lab: Block Density Stratification
-# Problem: Classify urban blocks based on household density (households / area_hectares).
-# Stratum A (High Density): Density >= 120 hh/ha
-# Stratum B (Medium Density): 60 <= Density < 120 hh/ha
-# Stratum C (Low Density): Density < 60 hh/ha
+# Instructions: Calculate household density (households / area_ha) for each block,
+# classify into Stratum A (High >= 120), Stratum B (Medium 60-120), or Stratum C (Low < 60),
+# and count total blocks in stratified_summary.
 
 ufs_blocks = [
     {"town": "Pune", "block_id": "UFS-27-0101", "households": 280, "area_ha": 1.8},
@@ -650,21 +607,19 @@ ufs_blocks = [
     {"town": "Pune", "block_id": "UFS-27-0104", "households": 340, "area_ha": 2.0},
 ]
 
-stratified_summary = {"Stratum A (High)": 0, "Stratum B (Medium)": 0, "Stratum C (Low)": 0}
-
-# TODO: 1. Loop through ufs_blocks and calculate density = b["households"] / b["area_ha"]
-# TODO: 2. Assign stratum category according to thresholds
-# TODO: 3. Count total blocks in stratified_summary
-
-# --- WRITE YOUR PYTHON CODE BELOW ---
+# --- WRITE YOUR CODE BELOW TO POPULATE stratified_summary ---
 
 
 
+# Output Report
 print("═══════════════════════════════════════════════════")
 print("  URBAN FRAME SURVEY (UFS) STRATIFICATION REPORT   ")
 print("═══════════════════════════════════════════════════")
-for st, count in stratified_summary.items():
-    print(f"• {st:25s}: {count} blocks")
+try:
+    for st, count in stratified_summary.items():
+        print(f"• {st:25s}: {count} blocks")
+except NameError as e:
+    print(f"⚠️ Calculation Error: Variable not defined ({e}). Complete the calculations above.")
 `,
     solutionCode: `# UFS Geospatial Division Lab: Block Density Stratification
 ufs_blocks = [
