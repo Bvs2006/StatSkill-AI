@@ -181,14 +181,17 @@ export interface CompetencyUpdateLog {
 export interface LearningResource {
   id: string;
   title: string;
-  fileType: "PDF" | "DOCX" | "TXT" | "CSV";
+  fileType: "PDF" | "DOCX" | "TXT" | "CSV" | "JSON" | "MD";
   pageCount: number;
+  fileSize?: string;
   uploadedDate: string;
   uploadedBy: string;
-  domain: CompetencyDomain;
+  domain: CompetencyDomain | string;
   associatedCompetencies: string[];
   summary: string;
   contentSnippet: string;
+  fullContent?: string;
+  isCustom?: boolean;
 }
 
 export interface LearningPathStep {

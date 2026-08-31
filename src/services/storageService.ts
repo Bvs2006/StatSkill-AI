@@ -1606,6 +1606,22 @@ export function saveLearningResources(resources: LearningResource[]): void {
   localStorage.setItem(STORAGE_KEYS.RESOURCES, JSON.stringify(resources));
 }
 
+export function addLearningResource(resource: LearningResource): void {
+  const current = getLearningResources();
+  const updated = [resource, ...current];
+  saveLearningResources(updated);
+}
+
+export function deleteLearningResource(id: string): void {
+  const current = getLearningResources();
+  const updated = current.filter((r) => r.id !== id);
+  saveLearningResources(updated);
+}
+
+export function resetLearningResources(): void {
+  saveLearningResources(DEFAULT_RESOURCES);
+}
+
 export function getAdminEmployees(): EmployeeRecord[] {
   if (typeof window === "undefined") return DEFAULT_EMPLOYEES;
   const stored = localStorage.getItem(STORAGE_KEYS.EMPLOYEES);

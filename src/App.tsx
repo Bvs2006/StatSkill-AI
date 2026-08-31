@@ -46,6 +46,9 @@ import {
   getQuizzes,
   getLearningResources,
   saveLearningResources,
+  addLearningResource,
+  deleteLearningResource,
+  resetLearningResources,
   getAdminEmployees,
   saveAdminEmployees,
   addAdminEmployee,
@@ -81,7 +84,7 @@ import {
 } from "./services/storageService";
 
 import { getRichCourseDetail } from "./services/courseContentData";
-import { generateOfficialDataset, triggerBrowserDownload } from "./services/fileDownloadService";
+import { generateOfficialDataset, triggerBrowserDownload, downloadLearningResource } from "./services/fileDownloadService";
 
 import {
   generateMCQsFromText,
@@ -3942,156 +3945,737 @@ function QuizzesScreen({ onNav }: { onNav: (s: Screen) => void }) {
 // ──────────────────────────────────────────────
 
 function ResourcesScreen({ onNav }: { onNav: (s: Screen) => void }) {
+  const { t, lang } = useLanguage();
+  const profile = getProfile();
   const [resources, setResources] = useState<LearningResource[]>(getLearningResources());
   const [search, setSearch] = useState("");
   const [activeDomain, setActiveDomain] = useState<string>("All");
+  const [activeFormat, setActiveFormat] = useState<string>("All");
   const [previewDoc, setPreviewDoc] = useState<LearningResource | null>(null);
+  const [previewTab, setPreviewTab] = useState<"overview" | "content">("overview");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [copiedNotification, setCopiedNotification] = useState(false);
+  const [statusNotice, setStatusNotice] = useState<string | null>(null);
+
+  // Form states for custom resource addition
+  const [resTitle, setResTitle] = useState("");
+  const [resDomain, setResDomain] = useState<string>("Statistical");
+  const [resFileType, setResFileType] = useState<"PDF" | "DOCX" | "TXT" | "CSV" | "JSON" | "MD">("PDF");
+  const [resPageCount, setResPageCount] = useState(12);
+  const [resFileSize, setResFileSize] = useState("145 KB");
+  const [resSummary, setResSummary] = useState("");
+  const [resSnippet, setResSnippet] = useState("");
+  const [resFullContent, setResFullContent] = useState("");
+  const [selectedComps, setSelectedComps] = useState<string[]>(["Sampling Theory & PPS"]);
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+
+  useEffect(() => {
+    setResources(getLearningResources());
+  }, []);
 
   const filtered = resources.filter((r) => {
-    const matchSearch = r.title.toLowerCase().includes(search.toLowerCase()) || r.summary.toLowerCase().includes(search.toLowerCase());
+    const query = search.toLowerCase();
+    const matchSearch =
+      r.title.toLowerCase().includes(query) ||
+      r.summary.toLowerCase().includes(query) ||
+      (r.contentSnippet && r.contentSnippet.toLowerCase().includes(query)) ||
+      (r.associatedCompetencies && r.associatedCompetencies.some((c) => c.toLowerCase().includes(query)));
+
     const matchDomain = activeDomain === "All" || r.domain === activeDomain;
-    return matchSearch && matchDomain;
+    const matchFormat = activeFormat === "All" || r.fileType === activeFormat;
+
+    return matchSearch && matchDomain && matchFormat;
   });
 
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsProcessingFile(true);
+    try {
+      const text = await extractTextFromFile(file);
+      const ext = file.name.split(".").pop()?.toUpperCase();
+      const detectedType = (["PDF", "DOCX", "TXT", "CSV", "JSON", "MD"].includes(ext || "")
+        ? ext
+        : "PDF") as "PDF" | "DOCX" | "TXT" | "CSV" | "JSON" | "MD";
+
+      // Calculate realistic metrics from the real file
+      const words = text.trim().split(/\s+/).filter(Boolean).length;
+      const estimatedPages = Math.max(1, Math.ceil(words / 320));
+      const sizeStr = file.size > 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+
+      const cleanTitle = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+
+      setResTitle(cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1));
+      setResFileType(detectedType);
+      setResPageCount(estimatedPages);
+      setResFileSize(sizeStr);
+      setResFullContent(text);
+      setResSnippet(text.slice(0, 380) + (text.length > 380 ? "..." : ""));
+
+      // Auto-extract first paragraph for summary
+      const firstParagraph = text.split("\n\n").find((p) => p.trim().length > 30) || text.slice(0, 200);
+      setResSummary(firstParagraph.trim().slice(0, 220));
+
+      setStatusNotice(`Extracted ${words} words from "${file.name}"!`);
+    } catch (err: any) {
+      alert(`Error reading file: ${err.message}`);
+    } finally {
+      setIsProcessingFile(false);
+    }
+  }
+
+  function handleAddResource(e: React.FormEvent) {
+    e.preventDefault();
+    if (!resTitle.trim() || !resSummary.trim()) {
+      alert("Please enter a title and summary for the resource.");
+      return;
+    }
+
+    const newResource: LearningResource = {
+      id: `res-custom-${Date.now()}`,
+      title: resTitle.trim(),
+      fileType: resFileType,
+      pageCount: Number(resPageCount) || 1,
+      fileSize: resFileSize || "120 KB",
+      uploadedDate: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+      uploadedBy: profile.name || "Faculty Officer",
+      domain: resDomain,
+      associatedCompetencies: selectedComps.length > 0 ? selectedComps : ["Sampling Theory & PPS"],
+      summary: resSummary.trim(),
+      contentSnippet: resSnippet.trim() || resFullContent.slice(0, 300) || "Official training manual ingested for statistical capacity building.",
+      fullContent: resFullContent.trim() || resSnippet.trim() || resSummary.trim(),
+      isCustom: true,
+    };
+
+    addLearningResource(newResource);
+    setResources(getLearningResources());
+    setIsAddModalOpen(false);
+
+    // Reset form
+    setResTitle("");
+    setResSummary("");
+    setResSnippet("");
+    setResFullContent("");
+    setStatusNotice(`🎉 "${newResource.title}" added to Official Learning Resources repository!`);
+  }
+
+  function handleDeleteResource(id: string) {
+    if (confirm("Are you sure you want to delete this resource from the repository?")) {
+      deleteLearningResource(id);
+      setResources(getLearningResources());
+      if (previewDoc?.id === id) setPreviewDoc(null);
+      setStatusNotice("Resource deleted from repository.");
+    }
+  }
+
+  function fillPresetMicrodata() {
+    setResTitle("NSSO 79th Round Synthetic Household Microdata");
+    setResDomain("Statistical");
+    setResFileType("CSV");
+    setResPageCount(1200);
+    setResFileSize("340 KB");
+    setSelectedComps(["Sampling Theory & PPS", "Survey Design & Methodology"]);
+    setResSummary("Comprehensive synthetic household dataset containing Multi-Stage Stratification Weights and Monthly Per Capita Expenditure (MPCE).");
+    const csvData = `Household_ID,State_Code,Sector,Stratum,Sub_Stratum,Household_Size,MPCE_Rupees,Multiplier_Weight,Social_Group\nHH-1001,09,Rural,0901,1,5,3420.50,540.22,OBC\nHH-1002,09,Rural,0901,1,4,4890.00,540.22,General\nHH-1003,09,Urban,0902,2,3,8450.00,320.15,General\nHH-1004,27,Rural,2701,1,6,2980.00,612.40,SC\nHH-1005,27,Urban,2702,1,4,11200.00,285.60,General\nHH-1006,19,Rural,1901,2,5,3150.00,480.90,ST\nHH-1007,19,Urban,1902,1,3,9600.00,290.40,OBC\nHH-1008,33,Rural,3301,1,4,4200.00,510.30,General`;
+    setResFullContent(csvData);
+    setResSnippet(csvData.slice(0, 300));
+  }
+
+  function fillPresetPriceIndex() {
+    setResTitle("Consumer Price Index (CPI) Rural-Urban Weighting Circular");
+    setResDomain("Statistical");
+    setResFileType("PDF");
+    setResPageCount(32);
+    setResFileSize("210 KB");
+    setSelectedComps(["Price Statistics (CPI / WPI)", "National Accounts & GVA"]);
+    setResSummary("Official circular on item weights basket recalibration, geometric mean aggregation, and rural-urban price divergence.");
+    const docData = `GOVERNMENT OF INDIA\nMINISTRY OF STATISTICS AND PROGRAMME IMPLEMENTATION\nNATIONAL STATISTICAL OFFICE (PRICE STATISTICS DIVISION)\n\nSUBJECT: METHODOLOGY FOR COMPILATION OF ALL-INDIA CONSUMER PRICE INDEX\n\n1. SCOPE AND COVERAGE\nThe All-India Consumer Price Index (CPI) measures changes over time in the general level of prices of goods and services that a reference population acquires, uses or pays for.\n\n2. WEIGHTING PATTERN\nThe weighting diagrams are based on the Consumer Expenditure Survey (CES). Items are classified into six major commodity groups:\n- Group 1: Food and Beverages (Weight: 45.86%)\n- Group 2: Pan, Tobacco and Intoxicants (Weight: 2.38%)\n- Group 3: Clothing and Footwear (Weight: 6.53%)\n- Group 4: Housing (Urban only, Weight: 10.07%)\n- Group 5: Fuel and Light (Weight: 6.84%)\n- Group 6: Miscellaneous (Weight: 28.32%)\n\n3. ELEMENTARY INDEX AGGREGATION\nElementary price indices are calculated at village/market level using Jevons Index Formula (Geometric Mean of Price Relatives) before Laspeyres aggregation.`;
+    setResFullContent(docData);
+    setResSnippet(docData.slice(0, 350));
+  }
+
+  function copyTextToClipboard(text: string) {
+    navigator.clipboard.writeText(text);
+    setCopiedNotification(true);
+    setTimeout(() => setCopiedNotification(false), 2000);
+  }
+
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="max-w-5xl mx-auto space-y-6 font-sans">
+      {/* Top Header */}
       <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Official Learning Resources &amp; Datasets</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Government statistical manuals, synthetic survey microdata, and sampling instruction files.
+            Government statistical manuals, synthetic survey microdata, national accounts handbooks, and ingested documents.
           </p>
         </div>
-        <button
-          onClick={() => onNav("trainer")}
-          className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer shrink-0"
-        >
-          Upload New Manual ↗
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setIsAddModalOpen(true)}
+            className="px-4 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+          >
+            <span>➕</span>
+            <span>Add Learning Resource / Dataset</span>
+          </button>
+          <button
+            onClick={() => onNav("trainer")}
+            className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5 transition-all"
+          >
+            <span>✍️</span>
+            <span>Trainer Portal ↗</span>
+          </button>
+        </div>
       </div>
 
+      {/* Summary Metrics Bar */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: "Total Resources", val: `${resources.length}`, icon: "📚" },
+          { label: "Data Tables & CSVs", val: `${resources.filter((r) => r.fileType === "CSV" || r.fileType === "JSON").length}`, icon: "📊" },
+          { label: "Official Manuals", val: `${resources.filter((r) => r.fileType === "PDF" || r.fileType === "DOCX").length}`, icon: "📑" },
+          { label: "Custom Ingested", val: `${resources.filter((r) => r.isCustom || r.id.startsWith("res-custom")).length}`, icon: "⚡" },
+        ].map((m) => (
+          <div key={m.label} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-2xs flex items-center justify-between">
+            <div>
+              <div className="text-[10px] text-gray-400 font-bold">{m.label}</div>
+              <div className="text-xl font-bold text-[#0B3D66] mt-0.5">{m.val}</div>
+            </div>
+            <span className="text-2xl">{m.icon}</span>
+          </div>
+        ))}
+      </div>
+
+      {/* Global Status Banner */}
+      {statusNotice && (
+        <div className="p-3.5 bg-blue-50/90 rounded-2xl border border-blue-200 text-xs text-blue-950 flex items-center justify-between shadow-2xs">
+          <div className="flex items-center gap-2">
+            <span>ℹ️</span>
+            <span>{statusNotice}</span>
+          </div>
+          <button onClick={() => setStatusNotice(null)} className="text-blue-700 hover:text-blue-950 font-bold cursor-pointer p-1">✕</button>
+        </div>
+      )}
+
       {/* Filter and Search Bar */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
-        <div className="relative w-full sm:w-80">
+      <div className="bg-white p-3.5 rounded-3xl border border-gray-100 shadow-2xs flex flex-col md:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full md:w-80">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search manuals, datasets, guides..."
-            className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[#0B3D66]"
+            placeholder="Search manuals, datasets, microdata..."
+            className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
           />
           <span className="absolute left-2.5 top-2.5 text-xs text-gray-400">🔍</span>
         </div>
 
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto overflow-x-auto max-w-full">
-          {["All", "Statistical", "Technical", "Digital Governance"].map((dom) => (
-            <button
-              key={dom}
-              onClick={() => setActiveDomain(dom)}
-              className={`px-3 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                activeDomain === dom ? "bg-[#0B3D66] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
-              }`}
-            >
-              {dom}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end flex-wrap">
+          {/* Domain Tabs */}
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold overflow-x-auto max-w-full">
+            {["All", "Statistical", "Technical", "Digital Governance", "Geospatial"].map((dom) => (
+              <button
+                key={dom}
+                onClick={() => setActiveDomain(dom)}
+                className={`px-3 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap text-[11px] ${
+                  activeDomain === dom ? "bg-[#0B3D66] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+                }`}
+              >
+                {dom}
+              </button>
+            ))}
+          </div>
+
+          {/* Format Selector */}
+          <select
+            value={activeFormat}
+            onChange={(e) => setActiveFormat(e.target.value)}
+            className="px-3 py-1.5 bg-gray-50 border border-gray-200 text-xs font-semibold text-gray-700 rounded-xl focus:outline-none cursor-pointer"
+          >
+            <option value="All">All Formats</option>
+            <option value="PDF">PDF Manuals</option>
+            <option value="CSV">CSV Datasets</option>
+            <option value="DOCX">DOCX Documents</option>
+            <option value="TXT">TXT Plaintext</option>
+            <option value="JSON">JSON Schema</option>
+          </select>
         </div>
       </div>
 
       {/* Resources List */}
       <div className="space-y-4">
-        {filtered.map((res) => (
-          <div key={res.id} className="p-5 bg-white rounded-3xl border border-gray-100 shadow-2xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md transition-shadow">
-            <div className="space-y-1.5 flex-1 min-w-0">
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-[10px] font-bold bg-rose-100 text-rose-900 px-2.5 py-0.5 rounded-full border border-rose-200">
-                  {res.fileType} · {res.pageCount} Pages
-                </span>
-                <span className="text-[10px] font-semibold text-gray-400">{res.uploadedDate} · {res.uploadedBy}</span>
-              </div>
-              <h3 className="text-sm font-bold text-[#0B3D66] leading-snug">{res.title}</h3>
-              <p className="text-xs text-gray-500 leading-relaxed">{res.summary}</p>
-              <div className="flex flex-wrap gap-1 pt-1">
-                {(res.associatedCompetencies || []).map((c, i) => (
-                  <span key={i} className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-[#0B3D66]">
-                    ✓ {c}
+        {filtered.map((res) => {
+          const isCustom = res.isCustom || res.id.startsWith("res-custom");
+          return (
+            <div
+              key={res.id}
+              className="p-5 bg-white rounded-3xl border border-gray-100 shadow-2xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md hover:border-blue-100 transition-all"
+            >
+              <div className="space-y-2 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${
+                    res.fileType === "CSV" || res.fileType === "JSON"
+                      ? "bg-emerald-100 text-emerald-900 border-emerald-200"
+                      : "bg-rose-100 text-rose-900 border-rose-200"
+                  }`}>
+                    {res.fileType} · {res.fileType === "CSV" ? `${res.pageCount || 100} Records` : `${res.pageCount || 10} Pages`}
                   </span>
-                ))}
+
+                  {res.fileSize && (
+                    <span className="text-[10px] font-medium text-gray-400 bg-gray-50 px-2 py-0.5 rounded border border-gray-200">
+                      {res.fileSize}
+                    </span>
+                  )}
+
+                  {isCustom ? (
+                    <span className="text-[9px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                      ⚡ Custom Upload
+                    </span>
+                  ) : (
+                    <span className="text-[9px] font-bold text-gray-500 bg-gray-50 px-2 py-0.5 rounded-full border border-gray-200">
+                      🏛️ MoSPI Official
+                    </span>
+                  )}
+
+                  <span className="text-[10px] font-semibold text-gray-400">
+                    {res.uploadedDate} · {res.uploadedBy}
+                  </span>
+                </div>
+
+                <h3 className="text-sm font-bold text-[#0B3D66] leading-snug hover:text-[#FF7A00] transition-colors cursor-pointer" onClick={() => setPreviewDoc(res)}>
+                  {res.title}
+                </h3>
+
+                <p className="text-xs text-gray-500 leading-relaxed line-clamp-2">
+                  {res.summary}
+                </p>
+
+                <div className="flex flex-wrap gap-1 pt-0.5">
+                  {(res.associatedCompetencies || []).map((c, i) => (
+                    <span key={i} className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-[#0B3D66]">
+                      ✓ {c}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0 flex-wrap">
+                <button
+                  onClick={() => {
+                    setPreviewDoc(res);
+                    setPreviewTab("overview");
+                  }}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+                >
+                  👁️ Preview
+                </button>
+                <button
+                  onClick={() => downloadLearningResource(res)}
+                  className="px-3.5 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
+                  title="Download actual file / dataset"
+                >
+                  <span>⬇️</span>
+                  <span>Download</span>
+                </button>
+                <button
+                  onClick={() => onNav("trainer")}
+                  className="px-3 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-all"
+                  title="Generate AI Quiz from this manual in Trainer Portal"
+                >
+                  ⚡ Quiz
+                </button>
+                {isCustom && (
+                  <button
+                    onClick={() => handleDeleteResource(res.id)}
+                    className="p-2 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-gray-200 transition-colors cursor-pointer"
+                    title="Delete Resource"
+                  >
+                    🗑️
+                  </button>
+                )}
               </div>
             </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
-              <button
-                onClick={() => setPreviewDoc(res)}
-                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer transition-colors"
-              >
-                👁️ Preview
-              </button>
-              <button
-                onClick={() => triggerBrowserDownload(generateOfficialDataset(res.title))}
-                className="px-3.5 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
-              >
-                <span>⬇️</span>
-                <span>Download</span>
-              </button>
-              <button
-                onClick={() => onNav("trainer")}
-                className="px-3 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs"
-                title="Generate AI Quiz from this manual"
-              >
-                ⚡ Quiz
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* ────────────── DOCUMENT PREVIEW MODAL ────────────── */}
-      {previewDoc && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
-            <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+      {filtered.length === 0 && (
+        <div className="text-center py-16 bg-white rounded-3xl border border-gray-100 space-y-3">
+          <div className="text-3xl">📄</div>
+          <div className="text-sm font-bold text-gray-700">No resources found</div>
+          <div className="text-xs text-gray-400">Try adjusting your domain filters, format, or search query.</div>
+        </div>
+      )}
+
+      {/* ────────────── ADD LEARNING RESOURCE MODAL ────────────── */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-3xl w-full shadow-2xl space-y-4 max-h-[92vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
               <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
-                  {previewDoc.domain} · {previewDoc.fileType}
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-900 px-2 py-0.5 rounded">
+                  Faculty Repository Ingestion
                 </span>
-                <h2 className="text-base font-bold text-[#0B3D66] mt-1">{previewDoc.title}</h2>
+                <h2 className="text-base font-bold text-[#0B3D66] mt-1">Publish Learning Resource or Dataset</h2>
               </div>
-              <button onClick={() => setPreviewDoc(null)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer">
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer"
+              >
                 ✕
               </button>
             </div>
 
-            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-xs space-y-3">
-              <div className="flex justify-between text-gray-500 text-[11px] pb-2 border-b border-gray-200">
-                <span>Published By: <strong>{previewDoc.uploadedBy}</strong></span>
-                <span>Pages: <strong>{previewDoc.pageCount}</strong></span>
+            {/* Real File Upload Dropzone */}
+            <div className="border-2 border-dashed border-blue-200 rounded-2xl p-6 text-center relative bg-blue-50/30 hover:bg-blue-50/70 transition-all">
+              <input
+                type="file"
+                accept=".pdf,.txt,.docx,.csv,.md,.json,.xlsx"
+                onChange={handleFileUpload}
+                disabled={isProcessingFile}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full z-10"
+              />
+              <div className="text-3xl mb-1">📄</div>
+              <div className="text-xs font-bold text-gray-800">
+                {isProcessingFile ? (
+                  <span className="flex items-center justify-center gap-2 text-[#0B3D66]">
+                    <span className="w-4 h-4 border-2 border-[#0B3D66] border-t-transparent rounded-full animate-spin" />
+                    <span>Extracting Real File Bytes &amp; Microdata...</span>
+                  </span>
+                ) : (
+                  "Drag & Drop or Click to Ingest Real File (PDF, DOCX, TXT, CSV, JSON, MD)"
+                )}
               </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">Executive Overview:</h4>
-                <p className="text-gray-600 leading-relaxed">{previewDoc.summary}</p>
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-800 mb-1">Authoritative Snippet:</h4>
-                <div className="p-3 bg-white rounded-xl border border-gray-200 font-mono text-[11px] text-gray-700 leading-relaxed">
-                  {previewDoc.contentSnippet || "Statutory training guidelines covering multi-stage survey methodology and calculation standards."}
-                </div>
-              </div>
+              <p className="text-[10px] text-gray-400 mt-1">
+                Extracts text, calculates realistic page/row count, and loads content directly into repository
+              </p>
             </div>
 
-            <div className="flex justify-between items-center pt-2">
+            {/* Quick Starters / Presets */}
+            <div className="flex items-center gap-2 p-2.5 bg-gray-50 rounded-2xl border border-gray-200 text-xs flex-wrap">
+              <span className="font-bold text-[#0B3D66]">⚡ Quick Sample Starters:</span>
               <button
-                onClick={() => triggerBrowserDownload(generateOfficialDataset(previewDoc.title))}
-                className="px-4 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] flex items-center gap-1.5 cursor-pointer shadow-xs"
+                type="button"
+                onClick={fillPresetMicrodata}
+                className="px-2.5 py-1 bg-white hover:bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold rounded-lg cursor-pointer text-[11px]"
               >
-                <span>⬇️ Download Complete Document</span>
+                📊 NSSO Microdata CSV
               </button>
+              <button
+                type="button"
+                onClick={fillPresetPriceIndex}
+                className="px-2.5 py-1 bg-white hover:bg-blue-50 text-blue-900 border border-blue-300 font-bold rounded-lg cursor-pointer text-[11px]"
+              >
+                🏷️ CPI Price Circular PDF
+              </button>
+            </div>
+
+            <form onSubmit={handleAddResource} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Document / Dataset Title</label>
+                  <input
+                    type="text"
+                    value={resTitle}
+                    onChange={(e) => setResTitle(e.target.value)}
+                    placeholder="e.g., Annual Survey of Industries (ASI) Volume 1"
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Domain / Cadre Pillar</label>
+                  <select
+                    value={resDomain}
+                    onChange={(e) => setResDomain(e.target.value)}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  >
+                    <option value="Statistical">Statistical</option>
+                    <option value="Technical">Technical</option>
+                    <option value="Digital Governance">Digital Governance</option>
+                    <option value="Geospatial">Geospatial</option>
+                    <option value="Behavioural">Behavioural</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">File Format</label>
+                  <select
+                    value={resFileType}
+                    onChange={(e) => setResFileType(e.target.value as any)}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  >
+                    <option value="PDF">PDF Document</option>
+                    <option value="CSV">CSV Microdata</option>
+                    <option value="DOCX">DOCX Manual</option>
+                    <option value="TXT">TXT Text</option>
+                    <option value="JSON">JSON Structure</option>
+                    <option value="MD">Markdown Notes</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Page / Row Count</label>
+                  <input
+                    type="number"
+                    value={resPageCount}
+                    onChange={(e) => setResPageCount(Number(e.target.value))}
+                    min={1}
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">File Size Tag</label>
+                  <input
+                    type="text"
+                    value={resFileSize}
+                    onChange={(e) => setResFileSize(e.target.value)}
+                    placeholder="e.g. 180 KB"
+                    className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Associated Cadre Competencies</label>
+                <div className="flex flex-wrap gap-1.5 p-2 bg-gray-50 rounded-xl border border-gray-200 max-h-24 overflow-y-auto">
+                  {DEFAULT_COMPETENCIES_CATALOGUE.map((comp) => {
+                    const isSelected = selectedComps.includes(comp.name);
+                    return (
+                      <button
+                        type="button"
+                        key={comp.id}
+                        onClick={() => {
+                          if (isSelected) {
+                            setSelectedComps(selectedComps.filter((c) => c !== comp.name));
+                          } else {
+                            setSelectedComps([...selectedComps, comp.name]);
+                          }
+                        }}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full cursor-pointer transition-all ${
+                          isSelected
+                            ? "bg-[#0B3D66] text-white"
+                            : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-100"
+                        }`}
+                      >
+                        {comp.name}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Executive Summary / Description</label>
+                <textarea
+                  rows={2}
+                  value={resSummary}
+                  onChange={(e) => setResSummary(e.target.value)}
+                  placeholder="Summarize the core topics, statutory mandate, and learning objectives..."
+                  className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">
+                  Full Document Content / Raw Dataset (Editable)
+                </label>
+                <textarea
+                  rows={5}
+                  value={resFullContent}
+                  onChange={(e) => {
+                    setResFullContent(e.target.value);
+                    if (!resSnippet) setResSnippet(e.target.value.slice(0, 300));
+                  }}
+                  placeholder="Paste manual text, survey instructions, or CSV table rows..."
+                  className="w-full p-2.5 font-mono text-[11px] border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66] leading-relaxed"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-[#0B3D66] hover:bg-[#FF7A00] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer transition-all flex items-center gap-1.5"
+                >
+                  <span>🚀 Publish to Repository</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────── DOCUMENT PREVIEW & VIEWER MODAL ────────────── */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-3xl w-full shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-900 px-2 py-0.5 rounded">
+                    {previewDoc.domain} · {previewDoc.fileType}
+                  </span>
+                  {previewDoc.fileSize && (
+                    <span className="text-[10px] text-gray-400 font-medium">{previewDoc.fileSize}</span>
+                  )}
+                  {previewDoc.isCustom && (
+                    <span className="text-[9px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-200">
+                      ⚡ User Custom
+                    </span>
+                  )}
+                </div>
+                <h2 className="text-base font-bold text-[#0B3D66]">{previewDoc.title}</h2>
+              </div>
               <button
                 onClick={() => setPreviewDoc(null)}
-                className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer"
               >
-                Close
+                ✕
               </button>
+            </div>
+
+            {/* Preview Tabs */}
+            <div className="flex gap-2 border-b border-gray-100 pb-1">
+              <button
+                onClick={() => setPreviewTab("overview")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                  previewTab === "overview"
+                    ? "bg-[#0B3D66] text-white shadow-xs"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                📑 Overview &amp; Metadata
+              </button>
+              <button
+                onClick={() => setPreviewTab("content")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${
+                  previewTab === "content"
+                    ? "bg-[#0B3D66] text-white shadow-xs"
+                    : "text-gray-600 hover:bg-gray-100"
+                }`}
+              >
+                📄 Full Text / Raw Dataset Viewer
+              </button>
+            </div>
+
+            {/* Tab 1: Overview */}
+            {previewTab === "overview" && (
+              <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-xs space-y-3.5">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] pb-3 border-b border-gray-200 text-gray-600">
+                  <div>
+                    <span className="text-gray-400 block text-[10px]">Published By:</span>
+                    <strong>{previewDoc.uploadedBy}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[10px]">Ingestion Date:</span>
+                    <strong>{previewDoc.uploadedDate}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[10px]">Page / Row Count:</span>
+                    <strong>{previewDoc.pageCount} {previewDoc.fileType === "CSV" ? "Records" : "Pages"}</strong>
+                  </div>
+                  <div>
+                    <span className="text-gray-400 block text-[10px]">Format:</span>
+                    <strong>{previewDoc.fileType} Format</strong>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-1">Executive Summary:</h4>
+                  <p className="text-gray-600 leading-relaxed bg-white p-3 rounded-xl border border-gray-200">
+                    {previewDoc.summary}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-1">Authoritative Snippet:</h4>
+                  <div className="p-3 bg-white rounded-xl border border-gray-200 font-mono text-[11px] text-gray-700 leading-relaxed max-h-32 overflow-y-auto">
+                    {previewDoc.contentSnippet || previewDoc.fullContent?.slice(0, 350) || "Statutory training guidelines covering multi-stage survey methodology and calculation standards."}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-bold text-gray-800 mb-1">Certified Competencies Addressed:</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {(previewDoc.associatedCompetencies || []).map((c, i) => (
+                      <span key={i} className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-blue-100/70 text-[#0B3D66] border border-blue-200">
+                        ✓ {c}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Tab 2: Full Content / Code Viewer */}
+            {previewTab === "content" && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center text-[11px] text-gray-500">
+                  <span>
+                    Word Count: <strong>{(previewDoc.fullContent || previewDoc.contentSnippet || "").split(/\s+/).filter(Boolean).length} words</strong>
+                  </span>
+                  <button
+                    onClick={() => copyTextToClipboard(previewDoc.fullContent || previewDoc.contentSnippet || "")}
+                    className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-lg cursor-pointer text-[10px]"
+                  >
+                    {copiedNotification ? "✓ Copied to Clipboard!" : "📋 Copy All Text"}
+                  </button>
+                </div>
+
+                <pre className="p-4 bg-gray-900 text-gray-100 rounded-2xl font-mono text-[11px] leading-relaxed max-h-72 overflow-y-auto whitespace-pre-wrap selection:bg-amber-500 selection:text-black">
+                  {previewDoc.fullContent || previewDoc.contentSnippet || previewDoc.summary}
+                </pre>
+              </div>
+            )}
+
+            {/* Bottom Actions */}
+            <div className="flex justify-between items-center pt-2 border-t border-gray-100 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => downloadLearningResource(previewDoc)}
+                  className="px-4 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                >
+                  <span>⬇️ Download Authentic File</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setPreviewDoc(null);
+                    onNav("trainer");
+                  }}
+                  className="px-3 py-2 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00] flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                >
+                  <span>⚡ Launch AI Quiz</span>
+                </button>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {previewDoc.isCustom && (
+                  <button
+                    onClick={() => handleDeleteResource(previewDoc.id)}
+                    className="px-3 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 text-xs font-bold rounded-xl cursor-pointer"
+                  >
+                    Delete
+                  </button>
+                )}
+                <button
+                  onClick={() => setPreviewDoc(null)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -5446,7 +6030,34 @@ function TrainerScreen() {
       const updated = [...formatted, ...bank];
       setBank(updated);
       saveTrainerQuestionBank(updated);
-      setStatusMsg(`Successfully generated and validated ${formatted.length} MCQs from ${file.name}!`);
+
+      // Also automatically register to Official Learning Resources repository
+      const ext = file.name.split(".").pop()?.toUpperCase() || "PDF";
+      const words = text.trim().split(/\s+/).filter(Boolean).length;
+      const estimatedPages = Math.max(1, Math.ceil(words / 320));
+      const sizeStr = file.size > 1024 * 1024
+        ? `${(file.size / (1024 * 1024)).toFixed(1)} MB`
+        : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+      const cleanTitle = file.name.replace(/\.[^/.]+$/, "").replace(/[_-]/g, " ");
+
+      const autoRes: LearningResource = {
+        id: `res-trainer-${Date.now()}`,
+        title: cleanTitle.charAt(0).toUpperCase() + cleanTitle.slice(1),
+        fileType: (["PDF", "DOCX", "TXT", "CSV", "JSON", "MD"].includes(ext) ? ext : "PDF") as any,
+        pageCount: estimatedPages,
+        fileSize: sizeStr,
+        uploadedDate: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+        uploadedBy: "Faculty Peer Ingestion (Trainer)",
+        domain: "Statistical",
+        associatedCompetencies: [competency],
+        summary: `Official training manual uploaded for ${competency} competency calibration and examination authoring.`,
+        contentSnippet: text.slice(0, 350) + (text.length > 350 ? "..." : ""),
+        fullContent: text,
+        isCustom: true,
+      };
+      addLearningResource(autoRes);
+
+      setStatusMsg(`Successfully generated & validated ${formatted.length} MCQs from ${file.name}, and added document to Official Learning Resources!`);
     } catch (err: any) {
       setStatusMsg(`Error during generation: ${err.message}`);
     } finally {

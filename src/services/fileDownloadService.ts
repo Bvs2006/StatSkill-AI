@@ -225,3 +225,26 @@ export function triggerBrowserDownload(asset: DownloadableAsset) {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 }
+
+export function downloadLearningResource(resource: {
+  title: string;
+  fileType?: string;
+  fullContent?: string;
+  contentSnippet?: string;
+  summary?: string;
+}): void {
+  if (resource.fullContent && resource.fullContent.trim()) {
+    const rawExt = (resource.fileType || "txt").toLowerCase();
+    const ext = rawExt === "pdf" || rawExt === "docx" ? "txt" : rawExt;
+    const cleanBase = resource.title.replace(/[^a-zA-Z0-9_\-\.]/g, "_").replace(/\s+/g, "_");
+    const filename = cleanBase.toLowerCase().endsWith(`.${ext}`) ? cleanBase : `${cleanBase}.${ext}`;
+    const mimeType = ext === "csv" ? "text/csv" : ext === "json" ? "application/json" : "text/plain";
+    triggerBrowserDownload({
+      filename,
+      mimeType,
+      content: resource.fullContent,
+    });
+  } else {
+    triggerBrowserDownload(generateOfficialDataset(resource.title));
+  }
+}
