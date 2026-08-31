@@ -47,6 +47,10 @@ import {
   getLearningResources,
   saveLearningResources,
   getAdminEmployees,
+  saveAdminEmployees,
+  addAdminEmployee,
+  updateAdminEmployee,
+  deleteAdminEmployee,
   getNotifications,
   getQuizAttempts,
   saveQuizAttempt,
@@ -54,6 +58,9 @@ import {
   applyClosedLoopCompetencyUpdate,
   getTrainerQuestionBank,
   saveTrainerQuestionBank,
+  addTrainerMCQ,
+  updateTrainerMCQ,
+  deleteTrainerMCQ,
   getExplainableRecommendations,
   getPersonalizedLearningPath,
   DEFAULT_JOB_ROLES,
@@ -66,6 +73,9 @@ import {
   getCourseImage,
   type VerifiableCertificate,
 } from "./services/storageService";
+
+import { getRichCourseDetail } from "./services/courseContentData";
+import { generateOfficialDataset, triggerBrowserDownload } from "./services/fileDownloadService";
 
 import {
   generateMCQsFromText,
@@ -676,26 +686,26 @@ function MobileBottomNav({
 }) {
   const learnerNav: { id: Screen; label: string; icon: string }[] = [
     { id: "dashboard", label: "Home", icon: "🏛️" },
-    { id: "learning-path", label: "Roadmap", icon: "🗺️" },
-    { id: "gap-analysis", label: "Skill Gap", icon: "🎯" },
-    { id: "virtual-labs", label: "Sandbox", icon: "💻" },
-    { id: "ai-tutor", label: "AI Tutor", icon: "🤖" },
+    { id: "skills", label: "Skills", icon: "🎯" },
+    { id: "courses", label: "Courses", icon: "📚" },
+    { id: "labs", label: "Sandbox", icon: "💻" },
+    { id: "assistant", label: "AI Tutor", icon: "🤖" },
   ];
 
   const trainerNav: { id: Screen; label: string; icon: string }[] = [
-    { id: "trainer", label: "Overview", icon: "🎓" },
-    { id: "trainer_curriculum", label: "Curriculum", icon: "📚" },
-    { id: "trainer_assessments", label: "Questions", icon: "📝" },
-    { id: "trainer_reports", label: "Reports", icon: "📊" },
-    { id: "virtual-labs", label: "Sandbox", icon: "💻" },
+    { id: "trainer", label: "Studio", icon: "🎓" },
+    { id: "dashboard", label: "Home", icon: "🏛️" },
+    { id: "courses", label: "Courses", icon: "📚" },
+    { id: "labs", label: "Sandbox", icon: "💻" },
+    { id: "assistant", label: "AI Tutor", icon: "🤖" },
   ];
 
   const adminNav: { id: Screen; label: string; icon: string }[] = [
     { id: "admin", label: "Admin", icon: "👑" },
-    { id: "admin_cadre_matrix", label: "Cadres", icon: "👥" },
-    { id: "admin_skill_taxonomy", label: "Taxonomy", icon: "🏷️" },
-    { id: "admin_analytics", label: "Reports", icon: "📈" },
-    { id: "gap-analysis", label: "Skill Gap", icon: "🎯" },
+    { id: "dashboard", label: "Home", icon: "🏛️" },
+    { id: "skills", label: "Skills", icon: "🎯" },
+    { id: "courses", label: "Courses", icon: "📚" },
+    { id: "assistant", label: "AI Tutor", icon: "🤖" },
   ];
 
   const items = role === "admin" ? adminNav : role === "trainer" ? trainerNav : learnerNav;
@@ -703,10 +713,25 @@ function MobileBottomNav({
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 px-1.5 py-1 flex justify-around items-center shadow-lg pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))]">
       {items.map((item) => {
-        const isActive = current === item.id;
+        const isActive =
+          current === item.id ||
+          (item.id === "skills" &&
+            (current === "skill_gaps" ||
+              current === "assessment" ||
+              current === "assessment_result")) ||
+          (item.id === "courses" &&
+            (current === "course_detail" ||
+              current === "course_player" ||
+              current === "learning_path" ||
+              current === "training_programmes" ||
+              current === "learning" ||
+              current === "quizzes" ||
+              current === "resources"));
+
         return (
           <button
             key={item.id}
+            type="button"
             onClick={() => onNav(item.id)}
             className={`flex flex-col items-center justify-center py-1 px-2 rounded-xl transition-all cursor-pointer min-w-[54px] active:scale-95 ${
               isActive
@@ -2566,7 +2591,7 @@ function LearningPathScreen({
         </div>
 
         <button
-          onClick={() => onNav("credentials")}
+          onClick={() => onNav("certificates")}
           className="px-5 py-3 bg-amber-400 hover:bg-amber-300 text-gray-950 text-xs font-bold rounded-2xl transition-all shadow-lg shrink-0 cursor-pointer"
         >
           View Credential Vault 🏆
@@ -2827,20 +2852,59 @@ function CourseDetailScreen({
           </ul>
         </div>
 
-        {/* Structure */}
+        {/* Structure & Chapters */}
         <div>
-          <h3 className="font-bold text-xs text-[#0B3D66] uppercase tracking-wider mb-2">Course Structure &amp; Modules</h3>
+          <h3 className="font-bold text-xs text-[#0B3D66] uppercase tracking-wider mb-2">Course Chapters &amp; Video Modules</h3>
           <div className="space-y-2">
-            {(course.syllabusModules || [
-              { id: "1", title: "Module 1: Concept Boundaries & Classifications", duration: "4 hours" },
-              { id: "2", title: "Module 2: Methodological Derive & Estimation", duration: "6 hours" },
-              { id: "3", title: "Module 3: Case Studies & Quality Checks", duration: "4 hours" },
-            ]).map((mod) => (
-              <div key={mod.id} className="p-3 bg-gray-50 rounded-xl flex justify-between text-xs font-medium">
-                <span>{mod.title}</span>
-                <span className="text-gray-400">{mod.duration}</span>
-              </div>
-            ))}
+            {(() => {
+              const rich = getRichCourseDetail(course.id, course.title);
+              const chapters = rich.chapters || [];
+              return chapters.map((ch) => (
+                <div key={ch.id} className="p-3 bg-gray-50 rounded-xl flex items-center justify-between text-xs hover:bg-blue-50/50 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <span className="w-5 h-5 rounded-full bg-[#0B3D66] text-white flex items-center justify-center text-[10px] font-bold">
+                      {ch.id}
+                    </span>
+                    <div>
+                      <div className="font-bold text-gray-800">{ch.title}</div>
+                      <div className="text-[11px] text-gray-500 line-clamp-1">{ch.summary}</div>
+                    </div>
+                  </div>
+                  <span className="text-gray-400 font-mono text-[11px] shrink-0">{ch.duration}</span>
+                </div>
+              ));
+            })()}
+          </div>
+        </div>
+
+        {/* Official Course Resources & Downloadable Datasets */}
+        <div>
+          <h3 className="font-bold text-xs text-[#0B3D66] uppercase tracking-wider mb-2">Downloadable Datasets &amp; Training Manuals</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {(() => {
+              const rich = getRichCourseDetail(course.id, course.title);
+              const resources = rich.resources || [];
+              return resources.map((res, idx) => (
+                <div key={idx} className="p-3 bg-gray-50 border border-gray-100 rounded-2xl flex items-center justify-between text-xs hover:border-gray-200 transition-all">
+                  <div className="min-w-0 pr-2">
+                    <div className="font-bold text-gray-800 truncate text-[11px]">{res.title}</div>
+                    <div className="text-[10px] text-gray-500 flex items-center gap-1.5 mt-0.5">
+                      <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 font-semibold">{res.type}</span>
+                      <span>·</span>
+                      <span>{res.size}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => triggerBrowserDownload(generateOfficialDataset(res.title))}
+                    className="px-3 py-1.5 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-[10px] font-bold rounded-xl shrink-0 cursor-pointer shadow-2xs flex items-center gap-1"
+                    title={`Download ${res.title}`}
+                  >
+                    <span>⬇️</span>
+                    <span>Download</span>
+                  </button>
+                </div>
+              ));
+            })()}
           </div>
         </div>
       </div>
@@ -3031,51 +3095,276 @@ function MyLearningScreen({
 // ──────────────────────────────────────────────
 
 function QuizzesScreen({ onNav }: { onNav: (s: Screen) => void }) {
-  const quizzes = getQuizzes();
+  const [quizzes, setQuizzes] = useState<QuizItem[]>(getQuizzes());
+  const [activeQuiz, setActiveQuiz] = useState<QuizItem | null>(null);
+  const [userAnswers, setUserAnswers] = useState<number[]>([]);
+  const [quizSubmitted, setQuizSubmitted] = useState(false);
+  const [elevationMsg, setElevationMsg] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedDomain, setSelectedDomain] = useState<string>("All");
+
+  const filteredQuizzes = quizzes.filter((q) => {
+    const matchSearch = q.title.toLowerCase().includes(searchQuery.toLowerCase()) || q.description.toLowerCase().includes(searchQuery.toLowerCase()) || q.competency.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchDomain = selectedDomain === "All" || q.domain === selectedDomain;
+    return matchSearch && matchDomain;
+  });
+
+  function startQuiz(quiz: QuizItem) {
+    setActiveQuiz(quiz);
+    setUserAnswers(new Array((quiz.questions || []).length).fill(-1));
+    setQuizSubmitted(false);
+    setElevationMsg(null);
+  }
+
+  function handleSelectAnswer(qIdx: number, optIdx: number) {
+    if (quizSubmitted) return;
+    const copy = [...userAnswers];
+    copy[qIdx] = optIdx;
+    setUserAnswers(copy);
+  }
+
+  function handleSubmitQuiz() {
+    if (!activeQuiz || !activeQuiz.questions) return;
+    setQuizSubmitted(true);
+
+    const correctCount = activeQuiz.questions.reduce(
+      (acc, q, idx) => acc + (userAnswers[idx] === q.correctAnswerIndex ? 1 : 0),
+      0
+    );
+    const scorePct = Math.round((correctCount / activeQuiz.questions.length) * 100);
+
+    // Save attempt
+    const attempt: QuizAttempt = {
+      quizId: activeQuiz.id,
+      timestamp: new Date().toISOString(),
+      scorePct,
+      passed: scorePct >= 70,
+      totalQuestions: activeQuiz.questions.length,
+      correctAnswers: correctCount,
+    };
+    saveQuizAttempt(attempt);
+
+    // Apply Closed-Loop Competency Update
+    const result = applyClosedLoopCompetencyUpdate({
+      competencyName: activeQuiz.competency,
+      scorePct,
+      evidence: `Topic Knowledge Check: ${activeQuiz.title} (Score: ${scorePct}%)`,
+    });
+
+    if (result.updated) {
+      setElevationMsg(`🎉 ${result.message}`);
+    } else {
+      setElevationMsg(`Score: ${scorePct}%. ${result.message}`);
+    }
+
+    // Update local quizzes state
+    const updated = quizzes.map((q) => (q.id === activeQuiz.id ? { ...q, completed: true, lastScorePct: scorePct } : q));
+    setQuizzes(updated);
+    localStorage.setItem("statskill_quizzes", JSON.stringify(updated));
+  }
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
           <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Quizzes &amp; Knowledge Checks</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Test competency understanding and trigger automatic profile score updates.
+            Interactive competency checks with instant scoring and closed-loop profile elevation.
           </p>
         </div>
         <button
           onClick={() => onNav("assessment")}
-          className="px-4 py-2 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00]"
+          className="px-4 py-2 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00] cursor-pointer shadow-sm shrink-0"
         >
-          Comprehensive Assessment ↗
+          Comprehensive Diagnostic ↗
         </button>
       </div>
 
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search quizzes by title, competency..."
+            className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[#0B3D66]"
+          />
+          <span className="absolute left-2.5 top-2.5 text-xs text-gray-400">🔍</span>
+        </div>
+
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto overflow-x-auto max-w-full">
+          {["All", "Statistical", "Technical", "Digital Governance"].map((d) => (
+            <button
+              key={d}
+              onClick={() => setSelectedDomain(d)}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                selectedDomain === d ? "bg-[#0B3D66] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {d}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Quizzes Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {quizzes.map((q) => (
-          <div key={q.id} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-2xs space-y-3 flex flex-col justify-between">
+        {filteredQuizzes.map((q) => (
+          <div key={q.id} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-2xs space-y-3 flex flex-col justify-between hover:shadow-md transition-shadow">
             <div>
               <div className="flex justify-between items-center mb-1">
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-blue-100 text-blue-800">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                  q.domain === "Statistical" ? "bg-blue-100 text-blue-800" : q.domain === "Technical" ? "bg-orange-100 text-orange-800" : "bg-emerald-100 text-emerald-800"
+                }`}>
                   {q.domain}
                 </span>
                 <span className="text-xs text-gray-400 font-mono">⏱️ {q.durationMinutes} min</span>
               </div>
-              <h3 className="text-sm font-bold text-gray-900">{q.title}</h3>
-              <p className="text-xs text-gray-500 mt-1">{q.description}</p>
+              <h3 className="text-sm font-bold text-gray-900 mt-1">{q.title}</h3>
+              <p className="text-xs text-gray-500 mt-1 line-clamp-2">{q.description}</p>
+              <div className="mt-2 text-[11px] text-[#0B3D66] font-medium">
+                Target: <strong>{q.competency}</strong>
+              </div>
             </div>
 
-            <div className="pt-2 border-t border-gray-100 flex justify-between items-center">
-              <span className="text-[11px] text-gray-400 font-mono">{q.questionsCount} Questions</span>
+            <div className="pt-3 border-t border-gray-100 flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <span className="text-[11px] text-gray-400 font-mono">{(q.questions || []).length} Questions</span>
+                {q.completed && (
+                  <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                    Passed ({q.lastScorePct || 85}%) ✓
+                  </span>
+                )}
+              </div>
               <button
-                onClick={() => onNav("assessment")}
-                className="px-4 py-1.5 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f]"
+                onClick={() => startQuiz(q)}
+                className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs transition-all flex items-center gap-1.5"
               >
-                {q.completed ? "Retake Quiz" : "Start Quiz"}
+                <span>{q.completed ? "Retake Quiz" : "Start Live Quiz"}</span>
+                <span>→</span>
               </button>
             </div>
           </div>
         ))}
       </div>
+
+      {/* ────────────── LIVE INTERACTIVE QUIZ RUNNER MODAL ────────────── */}
+      {activeQuiz && activeQuiz.questions && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-extrabold uppercase tracking-wider bg-orange-100 text-[#FF7A00] px-2.5 py-0.5 rounded-full">
+                  {activeQuiz.domain} · {activeQuiz.competency}
+                </span>
+                <h2 className="text-base font-bold text-[#0B3D66] mt-1">{activeQuiz.title}</h2>
+              </div>
+              <button
+                onClick={() => setActiveQuiz(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            {elevationMsg && (
+              <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-2xl text-xs font-bold text-emerald-950 flex items-center gap-2">
+                <span>{elevationMsg}</span>
+              </div>
+            )}
+
+            {/* Questions List */}
+            <div className="space-y-5">
+              {activeQuiz.questions.map((q, qIdx) => {
+                const isSelectedAny = userAnswers[qIdx] !== -1;
+                return (
+                  <div key={q.id || qIdx} className="space-y-3 p-4 rounded-2xl bg-gray-50 border border-gray-100 text-xs">
+                    <div className="font-bold text-gray-900 leading-snug">
+                      Question {qIdx + 1}: {q.question}
+                    </div>
+
+                    <div className="space-y-2">
+                      {q.options.map((opt, oIdx) => {
+                        const isSelected = userAnswers[qIdx] === oIdx;
+                        const isCorrect = q.correctAnswerIndex === oIdx;
+
+                        let style = "bg-white border-gray-200 text-gray-700 hover:border-blue-400";
+                        if (quizSubmitted) {
+                          if (isCorrect) style = "bg-emerald-50 border-emerald-400 text-emerald-900 font-bold shadow-xs";
+                          else if (isSelected && !isCorrect) style = "bg-rose-50 border-rose-400 text-rose-900";
+                        } else if (isSelected) {
+                          style = "bg-blue-50 border-[#0B3D66] text-[#0B3D66] font-bold shadow-xs";
+                        }
+
+                        return (
+                          <button
+                            key={oIdx}
+                            type="button"
+                            onClick={() => handleSelectAnswer(qIdx, oIdx)}
+                            className={`w-full p-2.5 rounded-xl border text-left text-xs transition-all flex items-center gap-2.5 cursor-pointer ${style}`}
+                          >
+                            <span className="w-5 h-5 rounded-full bg-gray-100 text-gray-700 flex items-center justify-center text-[10px] font-bold shrink-0">
+                              {String.fromCharCode(65 + oIdx)}
+                            </span>
+                            <span>{opt}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    {quizSubmitted && (
+                      <div className="p-3 bg-blue-50/80 rounded-xl text-[11px] text-[#0B3D66] leading-relaxed border border-blue-100">
+                        <strong>Methodology Note:</strong> {q.explanation}
+                        {q.sourceReference && (
+                          <div className="text-[10px] text-gray-500 mt-1 italic">
+                            Reference: {q.sourceReference}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Evaluation Footer */}
+            <div className="pt-3 border-t border-gray-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+              <span className="text-xs text-gray-500">
+                {quizSubmitted ? "Review answers and explanations above" : `Answer all ${activeQuiz.questions.length} questions to submit`}
+              </span>
+
+              <div className="flex gap-2">
+                {quizSubmitted ? (
+                  <>
+                    <button
+                      onClick={() => startQuiz(activeQuiz)}
+                      className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer"
+                    >
+                      Retake
+                    </button>
+                    <button
+                      onClick={() => setActiveQuiz(null)}
+                      className="px-5 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] cursor-pointer shadow-md"
+                    >
+                      Done &amp; Close
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleSubmitQuiz}
+                    disabled={userAnswers.includes(-1)}
+                    className="px-5 py-2.5 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00] shadow-md disabled:opacity-40 cursor-pointer"
+                  >
+                    Submit &amp; Evaluate →
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3085,47 +3374,160 @@ function QuizzesScreen({ onNav }: { onNav: (s: Screen) => void }) {
 // ──────────────────────────────────────────────
 
 function ResourcesScreen({ onNav }: { onNav: (s: Screen) => void }) {
-  const resources = getLearningResources();
+  const [resources, setResources] = useState<LearningResource[]>(getLearningResources());
+  const [search, setSearch] = useState("");
+  const [activeDomain, setActiveDomain] = useState<string>("All");
+  const [previewDoc, setPreviewDoc] = useState<LearningResource | null>(null);
+
+  const filtered = resources.filter((r) => {
+    const matchSearch = r.title.toLowerCase().includes(search.toLowerCase()) || r.summary.toLowerCase().includes(search.toLowerCase());
+    const matchDomain = activeDomain === "All" || r.domain === activeDomain;
+    return matchSearch && matchDomain;
+  });
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Official Learning Resources</h1>
+          <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Official Learning Resources &amp; Datasets</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Uploaded manuals, sampling instructions, and guidelines repository.
+            Government statistical manuals, synthetic survey microdata, and sampling instruction files.
           </p>
         </div>
         <button
           onClick={() => onNav("trainer")}
-          className="px-4 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl"
+          className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer shrink-0"
         >
-          Upload New Document ↗
+          Upload New Manual ↗
         </button>
       </div>
 
+      {/* Filter and Search Bar */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:w-80">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search manuals, datasets, guides..."
+            className="w-full pl-8 pr-3 py-2 text-xs border border-gray-200 rounded-xl bg-white focus:outline-none focus:border-[#0B3D66]"
+          />
+          <span className="absolute left-2.5 top-2.5 text-xs text-gray-400">🔍</span>
+        </div>
+
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-xl text-xs font-bold self-start sm:self-auto overflow-x-auto max-w-full">
+          {["All", "Statistical", "Technical", "Digital Governance"].map((dom) => (
+            <button
+              key={dom}
+              onClick={() => setActiveDomain(dom)}
+              className={`px-3 py-1 rounded-lg transition-all cursor-pointer whitespace-nowrap ${
+                activeDomain === dom ? "bg-[#0B3D66] text-white shadow-xs" : "text-gray-600 hover:text-gray-900"
+              }`}
+            >
+              {dom}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Resources List */}
       <div className="space-y-4">
-        {resources.map((res) => (
-          <div key={res.id} className="p-5 bg-white rounded-3xl border border-gray-100 shadow-2xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold bg-rose-100 text-rose-800 px-2 py-0.5 rounded">
+        {filtered.map((res) => (
+          <div key={res.id} className="p-5 bg-white rounded-3xl border border-gray-100 shadow-2xs flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 hover:shadow-md transition-shadow">
+            <div className="space-y-1.5 flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-[10px] font-bold bg-rose-100 text-rose-900 px-2.5 py-0.5 rounded-full border border-rose-200">
                   {res.fileType} · {res.pageCount} Pages
                 </span>
-                <span className="text-[10px] text-gray-400">{res.uploadedDate}</span>
+                <span className="text-[10px] font-semibold text-gray-400">{res.uploadedDate} · {res.uploadedBy}</span>
               </div>
-              <h3 className="text-sm font-bold text-gray-900">{res.title}</h3>
-              <p className="text-xs text-gray-500">{res.summary}</p>
+              <h3 className="text-sm font-bold text-[#0B3D66] leading-snug">{res.title}</h3>
+              <p className="text-xs text-gray-500 leading-relaxed">{res.summary}</p>
+              <div className="flex flex-wrap gap-1 pt-1">
+                {(res.associatedCompetencies || []).map((c, i) => (
+                  <span key={i} className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-[#0B3D66]">
+                    ✓ {c}
+                  </span>
+                ))}
+              </div>
             </div>
-            <button
-              onClick={() => onNav("trainer")}
-              className="px-4 py-2 bg-[#FF7A00] text-white text-xs font-bold rounded-xl hover:bg-[#e06a00]"
-            >
-              Generate Quiz ⚡
-            </button>
+
+            <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <button
+                onClick={() => setPreviewDoc(res)}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+              >
+                👁️ Preview
+              </button>
+              <button
+                onClick={() => triggerBrowserDownload(generateOfficialDataset(res.title))}
+                className="px-3.5 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs flex items-center gap-1.5 transition-all"
+              >
+                <span>⬇️</span>
+                <span>Download</span>
+              </button>
+              <button
+                onClick={() => onNav("trainer")}
+                className="px-3 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs"
+                title="Generate AI Quiz from this manual"
+              >
+                ⚡ Quiz
+              </button>
+            </div>
           </div>
         ))}
       </div>
+
+      {/* ────────────── DOCUMENT PREVIEW MODAL ────────────── */}
+      {previewDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-2xl w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-3 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                  {previewDoc.domain} · {previewDoc.fileType}
+                </span>
+                <h2 className="text-base font-bold text-[#0B3D66] mt-1">{previewDoc.title}</h2>
+              </div>
+              <button onClick={() => setPreviewDoc(null)} className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer">
+                ✕
+              </button>
+            </div>
+
+            <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-xs space-y-3">
+              <div className="flex justify-between text-gray-500 text-[11px] pb-2 border-b border-gray-200">
+                <span>Published By: <strong>{previewDoc.uploadedBy}</strong></span>
+                <span>Pages: <strong>{previewDoc.pageCount}</strong></span>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800 mb-1">Executive Overview:</h4>
+                <p className="text-gray-600 leading-relaxed">{previewDoc.summary}</p>
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-800 mb-1">Authoritative Snippet:</h4>
+                <div className="p-3 bg-white rounded-xl border border-gray-200 font-mono text-[11px] text-gray-700 leading-relaxed">
+                  {previewDoc.contentSnippet || "Statutory training guidelines covering multi-stage survey methodology and calculation standards."}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-between items-center pt-2">
+              <button
+                onClick={() => triggerBrowserDownload(generateOfficialDataset(previewDoc.title))}
+                className="px-4 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] flex items-center gap-1.5 cursor-pointer shadow-xs"
+              >
+                <span>⬇️ Download Complete Document</span>
+              </button>
+              <button
+                onClick={() => setPreviewDoc(null)}
+                className="px-4 py-2 bg-gray-100 text-gray-700 text-xs font-bold rounded-xl hover:bg-gray-200 cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -3150,6 +3552,7 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
   const [loading, setLoading] = useState(false);
   const [elevateNotice, setElevateNotice] = useState<string | null>(null);
   const [activeStage, setActiveStage] = useState<"assess" | "gap" | "learn" | "elevate">("assess");
+  const [isListening, setIsListening] = useState(false);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -3157,6 +3560,69 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [messages, loading]);
+
+  function speakMessage(text: string) {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const cleanText = text.replace(/[*#`_\[\]()]/g, "").slice(0, 300);
+    const utterance = new SpeechSynthesisUtterance(cleanText);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  }
+
+  function handleVoiceInput() {
+    if (typeof window === "undefined") return;
+    const SpeechRec = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRec) {
+      alert("Speech recognition is not supported in this browser. Please use keyboard input.");
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    try {
+      const recognition = new SpeechRec();
+      recognition.lang = "en-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => setIsListening(true);
+      recognition.onresult = (event: any) => {
+        const transcript = event.results?.[0]?.[0]?.transcript;
+        if (transcript) {
+          setInput(transcript);
+          handleSend(transcript);
+        }
+        setIsListening(false);
+      };
+      recognition.onerror = () => setIsListening(false);
+      recognition.onend = () => setIsListening(false);
+      recognition.start();
+    } catch {
+      setIsListening(false);
+    }
+  }
+
+  function handleExportConversation() {
+    const md = `# StatSkill AI Copilot Consultation Transcript
+**Officer Name:** ${profile.name || "Dr. Rajesh Sharma, ISS"}  
+**Cadre & Grade:** ${profile.cadreGrade || "STS"} (${profile.department || "Labour Statistics"})  
+**Date:** ${new Date().toLocaleString()}  
+
+---
+
+${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSkill AI Copilot"}**:\n\n${m.text}\n`).join("\n---\n\n")}
+`;
+    triggerBrowserDownload({
+      filename: `StatSkill_AI_Consultation_${new Date().toISOString().slice(0, 10)}.md`,
+      mimeType: "text/markdown",
+      content: md,
+    });
+  }
 
   const stagesData = [
     {
@@ -3319,8 +3785,17 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
             title="Groq Cloud LLaMA 3.3 70B Active (.env)"
           >
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>⚡ Groq LLaMA 3.3 Active</span>
+            <span>⚡ Groq LLaMA 3.3</span>
           </div>
+
+          <button
+            onClick={handleExportConversation}
+            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all text-xs font-bold cursor-pointer flex items-center gap-1"
+            title="Export Consultation Transcript as Markdown"
+          >
+            <span>📥</span>
+            <span className="hidden sm:inline">Export</span>
+          </button>
 
           <button
             onClick={handleClearHistory}
@@ -3426,7 +3901,7 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
 
               {/* Message Content */}
               <div
-                className={`p-4 rounded-3xl shadow-xs ${
+                className={`p-4 rounded-3xl shadow-xs relative group ${
                   m.role === "user"
                     ? "bg-[#0B3D66] text-white rounded-tr-none whitespace-pre-line"
                     : "bg-white text-gray-800 border border-gray-200 rounded-tl-none w-full"
@@ -3435,11 +3910,23 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
                 {m.role === "user" ? (
                   <div className="text-xs font-medium">{m.text}</div>
                 ) : (
-                  <AIResponseMessage
-                    content={m.text}
-                    onNav={onNav}
-                    onElevate={handleQuickElevate}
-                  />
+                  <>
+                    <AIResponseMessage
+                      content={m.text}
+                      onNav={onNav}
+                      onElevate={handleQuickElevate}
+                    />
+                    <div className="pt-2 mt-2 border-t border-gray-100 flex justify-between items-center text-[10px] text-gray-400">
+                      <span>StatSkill Official Advisory</span>
+                      <button
+                        onClick={() => speakMessage(m.text)}
+                        className="p-1 hover:text-[#0B3D66] rounded cursor-pointer transition-colors"
+                        title="Read out loud with text-to-speech"
+                      >
+                        🔊 Listen
+                      </button>
+                    </div>
+                  </>
                 )}
 
                 {/* In-Message Interactive Action Callouts */}
@@ -3473,6 +3960,18 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
         {/* Input Bar */}
         <div className="p-3.5 border-t border-gray-200/80 bg-white space-y-2">
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleVoiceInput}
+              className={`p-2.5 rounded-2xl border transition-all cursor-pointer shrink-0 ${
+                isListening
+                  ? "bg-rose-500 text-white border-rose-600 animate-pulse shadow-md"
+                  : "bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
+              }`}
+              title={isListening ? "Listening... Click to stop" : "Speak via Voice Recognition"}
+            >
+              {isListening ? "🎙️ Recording..." : "🎙️"}
+            </button>
             <input
               type="text"
               value={input}
@@ -4068,6 +4567,26 @@ function TrainerScreen() {
   const [generating, setGenerating] = useState(false);
   const [statusMsg, setStatusMsg] = useState<string | null>(null);
   const [competency, setCompetency] = useState("Python for Data Analysis");
+  const [searchBank, setSearchBank] = useState("");
+  const [filterComp, setFilterComp] = useState("All");
+
+  // Custom MCQ Modal state
+  const [isAuthorModalOpen, setIsAuthorModalOpen] = useState(false);
+  const [newQuestion, setNewQuestion] = useState("");
+  const [optA, setOptA] = useState("");
+  const [optB, setOptB] = useState("");
+  const [optC, setOptC] = useState("");
+  const [optD, setOptD] = useState("");
+  const [correctIdx, setCorrectIdx] = useState(0);
+  const [explanation, setExplanation] = useState("");
+  const [difficulty, setDifficulty] = useState<"Basic" | "Intermediate" | "Advanced">("Intermediate");
+  const [sourceRef, setSourceRef] = useState("");
+
+  const filteredBank = bank.filter((q) => {
+    const matchSearch = q.question.toLowerCase().includes(searchBank.toLowerCase()) || q.topic.toLowerCase().includes(searchBank.toLowerCase());
+    const matchComp = filterComp === "All" || q.competency === filterComp;
+    return matchSearch && matchComp;
+  });
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -4089,7 +4608,7 @@ function TrainerScreen() {
       );
 
       const formatted: ValidatedMCQ[] = mcqs.map((q) => ({
-        id: Date.now() + Math.random(),
+        id: Date.now() + Math.floor(Math.random() * 10000),
         question: q.question,
         options: q.options,
         correctAnswerIndex: q.correctAnswerIndex,
@@ -4114,13 +4633,85 @@ function TrainerScreen() {
     }
   }
 
+  function handleAddCustomMCQ(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newQuestion.trim() || !optA.trim() || !optB.trim() || !optC.trim() || !optD.trim()) {
+      alert("Please fill in the question and all 4 options.");
+      return;
+    }
+
+    const mcq: ValidatedMCQ = {
+      id: Date.now(),
+      question: newQuestion.trim(),
+      options: [optA.trim(), optB.trim(), optC.trim(), optD.trim()],
+      correctAnswerIndex: correctIdx,
+      explanation: explanation.trim() || "Verified official methodology reference.",
+      difficulty,
+      topic: competency,
+      competency,
+      sourceReference: sourceRef.trim() || "National Statistical Systems Training Academy (NSSTA)",
+      isValidated: true,
+      validationNotes: ["Faculty peer-reviewed & authored"],
+      status: "Approved",
+    };
+
+    addTrainerMCQ(mcq);
+    setBank([mcq, ...bank]);
+    setIsAuthorModalOpen(false);
+
+    // Reset form
+    setNewQuestion("");
+    setOptA("");
+    setOptB("");
+    setOptC("");
+    setOptD("");
+    setExplanation("");
+    setSourceRef("");
+    setStatusMsg("Custom question successfully authored and added to Bank!");
+  }
+
+  function handleDeleteQuestion(id: number) {
+    if (confirm("Are you sure you want to remove this question from the official Question Bank?")) {
+      deleteTrainerMCQ(id);
+      setBank(bank.filter((q) => q.id !== id));
+    }
+  }
+
+  function handleExportBankCsv() {
+    const csv = "ID,Competency,Difficulty,Question,OptionA,OptionB,OptionC,OptionD,CorrectIndex,Explanation,Source\n" +
+      bank.map((q) => `${q.id},"${q.competency}","${q.difficulty}","${q.question.replace(/"/g, '""')}","${(q.options[0]||'').replace(/"/g, '""')}","${(q.options[1]||'').replace(/"/g, '""')}","${(q.options[2]||'').replace(/"/g, '""')}","${(q.options[3]||'').replace(/"/g, '""')}",${q.correctAnswerIndex},"${(q.explanation||'').replace(/"/g, '""')}","${(q.sourceReference||'').replace(/"/g, '""')}"`).join("\n");
+    triggerBrowserDownload({
+      filename: `StatSkill_Question_Bank_${new Date().toISOString().slice(0, 10)}.csv`,
+      mimeType: "text/csv",
+      content: csv,
+    });
+  }
+
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Academy Trainer &amp; RAG MCQ Studio</h1>
-        <p className="text-xs text-gray-500 mt-0.5">
-          Upload official training manuals, extract context with RAG, and generate verified examination questions.
-        </p>
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Academy Trainer &amp; RAG MCQ Studio</h1>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Upload official training manuals, extract context with RAG, and author verified examination items.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setIsAuthorModalOpen(true)}
+            className="px-4 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+          >
+            <span>✍️</span>
+            <span>Author Custom MCQ</span>
+          </button>
+          <button
+            onClick={handleExportBankCsv}
+            className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer flex items-center gap-1.5"
+          >
+            <span>📥</span>
+            <span>Export Bank (.csv)</span>
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -4128,8 +4719,8 @@ function TrainerScreen() {
         {[
           { label: "Documents Uploaded", val: "12" },
           { label: "Quizzes Created", val: "24" },
-          { label: "Questions in Bank", val: `${bank.length || 42}` },
-          { label: "Published Quizzes", val: "18" },
+          { label: "Questions in Bank", val: `${bank.length}` },
+          { label: "Accredited Questions", val: `${bank.filter(q => q.isValidated).length}` },
         ].map((m) => (
           <div key={m.label} className="bg-white rounded-3xl p-4 border border-gray-100 shadow-2xs">
             <div className="text-[10px] text-gray-400 font-bold">{m.label}</div>
@@ -4142,15 +4733,16 @@ function TrainerScreen() {
       <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-semibold text-gray-700 mb-1">Target Competency</label>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Target Competency for RAG Ingestion</label>
             <select
               value={competency}
               onChange={(e) => setCompetency(e.target.value)}
-              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50"
+              className="w-full px-3 py-2 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66]"
             >
               <option value="Python for Data Analysis">Python for Data Analysis</option>
               <option value="National Accounts & GVA">National Accounts &amp; GVA</option>
               <option value="Sampling Theory & PPS">Sampling Theory &amp; PPS</option>
+              <option value="Price Statistics (CPI / WPI)">Price Statistics (CPI / WPI)</option>
               <option value="Data Privacy (DPDP Act)">Data Privacy (DPDP Act)</option>
             </select>
           </div>
@@ -4172,38 +4764,59 @@ function TrainerScreen() {
         </div>
 
         {statusMsg && (
-          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900 font-mono">
-            {statusMsg}
+          <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-xs text-emerald-900 font-mono flex items-center justify-between">
+            <span>{statusMsg}</span>
+            <button onClick={() => setStatusMsg(null)} className="text-emerald-700 hover:text-emerald-950 font-bold">✕</button>
           </div>
         )}
       </div>
 
-      {/* Question Bank List */}
+      {/* Question Bank List with Filter & Search */}
       <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
-        <div className="flex justify-between items-center pb-3 border-b border-gray-100">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b border-gray-100 gap-3">
           <h2 className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">
-            Validated Question Bank ({bank.length} Questions)
+            Validated Question Bank ({filteredBank.length} Questions)
           </h2>
-          <button
-            onClick={() => {
-              setBank([]);
-              saveTrainerQuestionBank([]);
-            }}
-            className="text-[10px] text-rose-600 font-bold hover:underline"
-          >
-            Clear Bank
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <input
+              type="text"
+              value={searchBank}
+              onChange={(e) => setSearchBank(e.target.value)}
+              placeholder="Filter questions..."
+              className="px-3 py-1.5 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] flex-1 sm:w-48"
+            />
+            <button
+              onClick={() => {
+                if (confirm("Clear all items in the Question Bank?")) {
+                  setBank([]);
+                  saveTrainerQuestionBank([]);
+                }
+              }}
+              className="text-[10px] text-rose-600 font-bold hover:underline cursor-pointer shrink-0"
+            >
+              Clear Bank
+            </button>
+          </div>
         </div>
 
-        {bank.length > 0 ? (
+        {filteredBank.length > 0 ? (
           <div className="space-y-3">
-            {bank.map((q, idx) => (
-              <div key={idx} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/60 space-y-2 text-xs">
-                <div className="flex justify-between items-start">
+            {filteredBank.map((q, idx) => (
+              <div key={q.id || idx} className="p-4 rounded-2xl border border-gray-100 bg-gray-50/60 space-y-2 text-xs hover:border-gray-200 transition-colors">
+                <div className="flex justify-between items-start gap-2">
                   <span className="font-bold text-gray-900">Q{idx + 1}: {q.question}</span>
-                  <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
-                    Validated ✓
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded">
+                      Validated ✓
+                    </span>
+                    <button
+                      onClick={() => handleDeleteQuestion(q.id)}
+                      className="text-gray-400 hover:text-rose-600 p-1 cursor-pointer transition-colors"
+                      title="Delete question"
+                    >
+                      🗑️
+                    </button>
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-gray-600">
                   {q.options.map((opt, i) => (
@@ -4212,19 +4825,182 @@ function TrainerScreen() {
                     </div>
                   ))}
                 </div>
-                <div className="text-[10px] text-gray-400 pt-1 flex justify-between">
-                  <span>Source: {q.sourceReference}</span>
-                  <span>Competency: {q.competency}</span>
+                <div className="text-[10px] text-gray-500 pt-1 flex flex-col sm:flex-row justify-between gap-1">
+                  <span>Source: <strong>{q.sourceReference}</strong></span>
+                  <span>Competency: <strong className="text-[#0B3D66]">{q.competency}</strong> ({q.difficulty})</span>
                 </div>
               </div>
             ))}
           </div>
         ) : (
           <div className="py-8 text-center text-xs text-gray-400">
-            No questions generated yet. Upload a document above to populate the question bank.
+            No questions found matching your filter. Author a question or upload a training document above.
           </div>
         )}
       </div>
+
+      {/* ────────────── AUTHOR CUSTOM MCQ MODAL ────────────── */}
+      {isAuthorModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-orange-100 text-orange-900 px-2 py-0.5 rounded">
+                  Faculty Question Authoring
+                </span>
+                <h2 className="text-base font-bold text-[#0B3D66] mt-1">Create Custom Assessment Item</h2>
+              </div>
+              <button
+                onClick={() => setIsAuthorModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCustomMCQ} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Question Stem</label>
+                <textarea
+                  rows={2}
+                  value={newQuestion}
+                  onChange={(e) => setNewQuestion(e.target.value)}
+                  placeholder="Enter the statistical question or methodological scenario..."
+                  className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Option A</label>
+                  <input
+                    type="text"
+                    value={optA}
+                    onChange={(e) => setOptA(e.target.value)}
+                    placeholder="Option A content"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Option B</label>
+                  <input
+                    type="text"
+                    value={optB}
+                    onChange={(e) => setOptB(e.target.value)}
+                    placeholder="Option B content"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Option C</label>
+                  <input
+                    type="text"
+                    value={optC}
+                    onChange={(e) => setOptC(e.target.value)}
+                    placeholder="Option C content"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Option D</label>
+                  <input
+                    type="text"
+                    value={optD}
+                    onChange={(e) => setOptD(e.target.value)}
+                    placeholder="Option D content"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Correct Answer</label>
+                  <select
+                    value={correctIdx}
+                    onChange={(e) => setCorrectIdx(Number(e.target.value))}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                  >
+                    <option value={0}>Option A</option>
+                    <option value={1}>Option B</option>
+                    <option value={2}>Option C</option>
+                    <option value={3}>Option D</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Competency</label>
+                  <select
+                    value={competency}
+                    onChange={(e) => setCompetency(e.target.value)}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                  >
+                    <option value="Python for Data Analysis">Python for Data Analysis</option>
+                    <option value="National Accounts & GVA">National Accounts &amp; GVA</option>
+                    <option value="Sampling Theory & PPS">Sampling Theory &amp; PPS</option>
+                    <option value="Price Statistics (CPI / WPI)">Price Statistics (CPI / WPI)</option>
+                    <option value="Data Privacy (DPDP Act)">Data Privacy (DPDP Act)</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Difficulty</label>
+                  <select
+                    value={difficulty}
+                    onChange={(e) => setDifficulty(e.target.value as any)}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                  >
+                    <option value="Basic">Basic</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Methodology Explanation &amp; Rationale</label>
+                <textarea
+                  rows={2}
+                  value={explanation}
+                  onChange={(e) => setExplanation(e.target.value)}
+                  placeholder="Explain why the correct answer is right and cite formulas..."
+                  className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Source Manual / Statutory Citation</label>
+                <input
+                  type="text"
+                  value={sourceRef}
+                  onChange={(e) => setSourceRef(e.target.value)}
+                  placeholder="e.g., NSSO 79th Round Instruction Manual · Chapter 4"
+                  className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAuthorModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                >
+                  Save to Question Bank
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -4234,7 +5010,106 @@ function TrainerScreen() {
 // ──────────────────────────────────────────────
 
 function AdminScreen() {
-  const employees = getAdminEmployees();
+  const [employees, setEmployees] = useState<EmployeeRecord[]>(getAdminEmployees());
+  const [search, setSearch] = useState("");
+  const [deptFilter, setDeptFilter] = useState("All");
+  const [complianceFilter, setComplianceFilter] = useState("All");
+
+  // Modals state
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingOfficer, setEditingOfficer] = useState<EmployeeRecord | null>(null);
+
+  // Form fields for Add/Edit
+  const [formName, setFormName] = useState("");
+  const [formDept, setFormDept] = useState("Labour & Employment Statistics");
+  const [formCadre, setFormCadre] = useState("Indian Statistical Service");
+  const [formGrade, setFormGrade] = useState("Senior Time Scale (STS)");
+  const [formRole, setFormRole] = useState("Statistical Officer");
+  const [formCompIndex, setFormCompIndex] = useState(3.6);
+  const [formHours, setFormHours] = useState(42);
+  const [formCompliance, setFormCompliance] = useState<"Compliant" | "In Progress" | "Action Required">("In Progress");
+
+  function openAddModal() {
+    setEditingOfficer(null);
+    setFormName("");
+    setFormDept("Labour & Employment Statistics");
+    setFormCadre("Indian Statistical Service");
+    setFormGrade("Senior Time Scale (STS)");
+    setFormRole("Statistical Officer");
+    setFormCompIndex(3.6);
+    setFormHours(42);
+    setFormCompliance("In Progress");
+    setIsAddModalOpen(true);
+  }
+
+  function openEditModal(emp: EmployeeRecord) {
+    setEditingOfficer(emp);
+    setFormName(emp.name);
+    setFormDept(emp.department);
+    setFormCadre(emp.cadre);
+    setFormGrade(emp.grade);
+    setFormRole(emp.role);
+    setFormCompIndex(emp.competencyIndex);
+    setFormHours(emp.hoursCompleted);
+    setFormCompliance(emp.complianceStatus as any);
+    setIsAddModalOpen(true);
+  }
+
+  function handleSaveOfficer(e: React.FormEvent) {
+    e.preventDefault();
+    if (!formName.trim()) {
+      alert("Please enter an officer name.");
+      return;
+    }
+
+    if (editingOfficer) {
+      const updated: EmployeeRecord = {
+        ...editingOfficer,
+        name: formName.trim(),
+        department: formDept,
+        cadre: formCadre,
+        grade: formGrade,
+        role: formRole,
+        competencyIndex: Number(formCompIndex),
+        hoursCompleted: Number(formHours),
+        complianceStatus: formCompliance,
+      };
+      updateAdminEmployee(updated);
+      setEmployees(employees.map((e) => (e.id === updated.id ? updated : e)));
+    } else {
+      const newEmp: EmployeeRecord = {
+        id: `emp-${Date.now()}`,
+        name: formName.trim(),
+        department: formDept,
+        cadre: formCadre,
+        grade: formGrade,
+        role: formRole,
+        competencyIndex: Number(formCompIndex),
+        highGapsCount: Number(formCompIndex) < 3.5 ? 2 : 1,
+        hoursCompleted: Number(formHours),
+        complianceStatus: formCompliance,
+      };
+      addAdminEmployee(newEmp);
+      setEmployees([newEmp, ...employees]);
+    }
+
+    setIsAddModalOpen(false);
+  }
+
+  function handleDeleteOfficer(id: string) {
+    if (confirm("Are you sure you want to remove this officer record from the active monitoring roster?")) {
+      deleteAdminEmployee(id);
+      setEmployees(employees.filter((e) => e.id !== id));
+    }
+  }
+
+  // Filtered employees list
+  const filteredEmployees = employees.filter((e) => {
+    const matchSearch = e.name.toLowerCase().includes(search.toLowerCase()) || e.department.toLowerCase().includes(search.toLowerCase()) || e.role.toLowerCase().includes(search.toLowerCase());
+    const matchDept = deptFilter === "All" || e.department === deptFilter;
+    const matchCompliance = complianceFilter === "All" || e.complianceStatus === complianceFilter;
+    return matchSearch && matchDept && matchCompliance;
+  });
 
   // Compute deptData dynamically
   const deptMap = new Map<string, { totalScore: number; count: number }>();
@@ -4248,10 +5123,9 @@ function AdminScreen() {
   const deptData = Array.from(deptMap.entries()).map(([name, stats]) => ({
     name,
     avgScore: Number((stats.totalScore / stats.count).toFixed(1)),
-    compliance: 100, // Placeholder
   }));
 
-  // Compute Top 4 Metrics dynamically
+  // Dynamic Metrics
   const totalEmployees = employees.length;
   const avgCompetency = totalEmployees
     ? (employees.reduce((acc, e) => acc + e.competencyIndex, 0) / totalEmployees).toFixed(1)
@@ -4263,12 +5137,11 @@ function AdminScreen() {
   function handleExportCsv() {
     const csvContent = "Name,Department,Cadre,Grade,Role,CompetencyIndex,HighGaps,Hours,Status\n" +
       employees.map((e) => `"${e.name}","${e.department}","${e.cadre}","${e.grade}","${e.role}",${e.competencyIndex},${e.highGapsCount},${e.hoursCompleted},"${e.complianceStatus}"`).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `StatSkill_Admin_Employee_Roster_${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
+    triggerBrowserDownload({
+      filename: `StatSkill_Admin_Employee_Roster_${new Date().toISOString().slice(0, 10)}.csv`,
+      mimeType: "text/csv",
+      content: csvContent,
+    });
   }
 
   return (
@@ -4277,15 +5150,25 @@ function AdminScreen() {
         <div>
           <h1 className="text-2xl font-bold text-[#0B3D66] font-serif">Ministry Administrator Analytics</h1>
           <p className="text-xs text-gray-500 mt-0.5">
-            Organization-wide workforce readiness, department skill gap heatmaps, and predictive AI models.
+            Organization-wide workforce readiness, department skill gap heatmaps, and cadre roster management.
           </p>
         </div>
-        <button
-          onClick={handleExportCsv}
-          className="px-4 py-2 bg-[#0B3D66] text-white text-xs font-bold rounded-xl hover:bg-[#082e4f] cursor-pointer self-start sm:self-auto"
-        >
-          📥 Export Cadre Roster (.csv)
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={openAddModal}
+            className="px-4 py-2 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs flex items-center gap-1.5"
+          >
+            <span>➕</span>
+            <span>Add Officer</span>
+          </button>
+          <button
+            onClick={handleExportCsv}
+            className="px-4 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl cursor-pointer shadow-xs flex items-center gap-1.5"
+          >
+            <span>📥</span>
+            <span>Export Roster (.csv)</span>
+          </button>
+        </div>
       </div>
 
       {/* Top 4 Metrics */}
@@ -4343,33 +5226,79 @@ function AdminScreen() {
         </div>
       </div>
 
-      {/* Employee Table */}
-      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-3">
-        <h2 className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">Official Employee Cadre Roster</h2>
+      {/* Employee Table with Search & Filters */}
+      <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center pb-3 border-b border-gray-100 gap-3">
+          <h2 className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">
+            Official Employee Cadre Roster ({filteredEmployees.length} Officers)
+          </h2>
+          <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search officer name or department..."
+              className="px-3 py-1.5 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none focus:border-[#0B3D66] w-full sm:w-56"
+            />
+            <select
+              value={complianceFilter}
+              onChange={(e) => setComplianceFilter(e.target.value)}
+              className="px-3 py-1.5 text-xs border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+            >
+              <option value="All">All Statuses</option>
+              <option value="Compliant">Compliant</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Action Required">Action Required</option>
+            </select>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-gray-100 text-[10px] uppercase font-bold text-gray-400">
-                <th className="pb-2">Name</th>
+                <th className="pb-2">Name &amp; Cadre</th>
                 <th className="pb-2">Department</th>
                 <th className="pb-2">Role</th>
                 <th className="pb-2 text-center">Competency</th>
                 <th className="pb-2 text-center">Hours</th>
-                <th className="pb-2 text-right">Status</th>
+                <th className="pb-2 text-center">Status</th>
+                <th className="pb-2 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50 text-gray-700">
-              {employees.map((e) => (
+              {filteredEmployees.map((e) => (
                 <tr key={e.id} className="hover:bg-gray-50/60">
-                  <td className="py-2.5 font-bold text-[#0B3D66]">{e.name}</td>
+                  <td className="py-2.5">
+                    <div className="font-bold text-[#0B3D66]">{e.name}</div>
+                    <div className="text-[10px] text-gray-400">{e.cadre} ({e.grade})</div>
+                  </td>
                   <td className="py-2.5 text-gray-500">{e.department}</td>
                   <td className="py-2.5 text-gray-600">{e.role}</td>
                   <td className="py-2.5 text-center font-semibold">{e.competencyIndex} / 5</td>
                   <td className="py-2.5 text-center font-semibold">{e.hoursCompleted}h</td>
-                  <td className="py-2.5 text-right">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${e.complianceStatus === "Compliant" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"}`}>
+                  <td className="py-2.5 text-center">
+                    <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full ${
+                      e.complianceStatus === "Compliant" ? "bg-emerald-100 text-emerald-800" : e.complianceStatus === "In Progress" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-800"
+                    }`}>
                       {e.complianceStatus}
                     </span>
+                  </td>
+                  <td className="py-2.5 text-right space-x-1">
+                    <button
+                      onClick={() => openEditModal(e)}
+                      className="p-1 hover:text-[#0B3D66] text-gray-400 cursor-pointer"
+                      title="Edit officer"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      onClick={() => handleDeleteOfficer(e.id)}
+                      className="p-1 hover:text-rose-600 text-gray-400 cursor-pointer"
+                      title="Delete officer"
+                    >
+                      🗑️
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -4377,6 +5306,154 @@ function AdminScreen() {
           </table>
         </div>
       </div>
+
+      {/* ────────────── ADD / EDIT OFFICER MODAL ────────────── */}
+      {isAddModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start pb-2 border-b border-gray-100">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-100 text-blue-800 px-2 py-0.5 rounded">
+                  {editingOfficer ? "Edit Officer Profile" : "Add New Officer"}
+                </span>
+                <h2 className="text-base font-bold text-[#0B3D66] mt-1">
+                  {editingOfficer ? `Update ${editingOfficer.name}` : "Register Cadre Record"}
+                </h2>
+              </div>
+              <button
+                onClick={() => setIsAddModalOpen(false)}
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center text-xs cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveOfficer} className="space-y-3 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 mb-1">Officer Name</label>
+                <input
+                  type="text"
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="e.g. Dr. Priya Nair, ISS"
+                  className="w-full p-2.5 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none focus:border-[#0B3D66]"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Department</label>
+                  <select
+                    value={formDept}
+                    onChange={(e) => setFormDept(e.target.value)}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                  >
+                    <option value="Labour & Employment Statistics">Labour &amp; Employment Statistics</option>
+                    <option value="National Accounts Division (NAD)">National Accounts Division (NAD)</option>
+                    <option value="Price Statistics Division (PSD)">Price Statistics Division (PSD)</option>
+                    <option value="Economic Statistics Division (ESD)">Economic Statistics Division (ESD)</option>
+                    <option value="Survey Design & Research Division">Survey Design &amp; Research Division</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Cadre</label>
+                  <select
+                    value={formCadre}
+                    onChange={(e) => setFormCadre(e.target.value)}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                  >
+                    <option value="Indian Statistical Service">Indian Statistical Service (ISS)</option>
+                    <option value="Subordinate Statistical Service">Subordinate Statistical Service (SSS)</option>
+                    <option value="State DES Cadre">State Directorate of Economics &amp; Statistics</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Grade</label>
+                  <input
+                    type="text"
+                    value={formGrade}
+                    onChange={(e) => setFormGrade(e.target.value)}
+                    placeholder="e.g. Senior Time Scale (STS)"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Role Title</label>
+                  <input
+                    type="text"
+                    value={formRole}
+                    onChange={(e) => setFormRole(e.target.value)}
+                    placeholder="e.g. Statistical Officer"
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:bg-white focus:outline-none"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Competency Index</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1"
+                    max="5"
+                    value={formCompIndex}
+                    onChange={(e) => setFormCompIndex(Number(e.target.value))}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">CPD Hours</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formHours}
+                    onChange={(e) => setFormHours(Number(e.target.value))}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 mb-1">Compliance Status</label>
+                  <select
+                    value={formCompliance}
+                    onChange={(e) => setFormCompliance(e.target.value as any)}
+                    className="w-full p-2 border border-gray-200 rounded-xl bg-gray-50 focus:outline-none"
+                  >
+                    <option value="Compliant">Compliant</option>
+                    <option value="In Progress">In Progress</option>
+                    <option value="Action Required">Action Required</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-[#0B3D66] hover:bg-[#082e4f] text-white text-xs font-bold rounded-xl shadow-md cursor-pointer"
+                >
+                  {editingOfficer ? "Save Changes" : "Create Officer Record"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
