@@ -69,6 +69,7 @@ import {
   getExplainableRecommendations,
   getPersonalizedLearningPath,
   DEFAULT_JOB_ROLES,
+  DEFAULT_COMPETENCIES_CATALOGUE,
   getCertificates,
   issueDigitalCredential,
   verifyCredential,
