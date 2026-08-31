@@ -651,6 +651,7 @@ export async function chatWithGroqAssistant(
     designation?: string;
     department?: string;
     gaps?: string[];
+    lang?: "EN" | "HI" | "TE";
   }
 ): Promise<{ text: string; source: "ai" | "mock" }> {
   const lastUserMsg = (conversationHistory[conversationHistory.length - 1]?.content || "").toLowerCase();
@@ -659,7 +660,14 @@ export async function chatWithGroqAssistant(
   // Try live API if key is available, with full Closed-Loop Competency Framework
   if (apiKey) {
     try {
-      const systemPrompt = `You are the Official Domain-Specific AI Statistical Copilot for India's Ministry of Statistics and Programme Implementation (MoSPI), NSSTA, and the iGOT Karmayogi platform.
+      let langInstruction = "";
+      if (userContext?.lang === "HI") {
+        langInstruction = "\nIMPORTANT: The user has selected Hindi (हिन्दी) language. Respond in clear, professional Hindi (देवनागरी लिपि) while keeping mathematical formulas, official abbreviations (e.g. SNA 2008, GVA, PLFS, CPI, WPI), and code blocks clean and understandable.";
+      } else if (userContext?.lang === "TE") {
+        langInstruction = "\nIMPORTANT: The user has selected Telugu (తెలుగు) language. Respond in fluent, professional Telugu (తెలుగు లిపి) while keeping mathematical formulas, official abbreviations (e.g. SNA 2008, GVA, PLFS, CPI, WPI), and code blocks clean and understandable.";
+      }
+
+      const systemPrompt = `You are the Official Domain-Specific AI Statistical Copilot for India's Ministry of Statistics and Programme Implementation (MoSPI), NSSTA, and the iGOT Karmayogi platform.${langInstruction}
 You have deep expertise in:
 1. UN System of National Accounts (SNA 2008), GVA compilation at basic prices, Supply-Use Tables (SUT), double deflation, FISIM, and quarterly GDP estimation.
 2. NSSO & PLFS survey methodologies, two-stage stratified PPS sampling, circular systematic selection of FSUs, and multiplier ($MLT / 200$) normalization.

@@ -1858,6 +1858,7 @@ function DashboardScreen({
   onNav: (s: Screen) => void;
   onOpenCourse: (c: CourseItem) => void;
 }) {
+  const { t, lang } = useLanguage();
   const profile = getProfile();
   const userComps = getUserCompetencies();
   const courses = getCourses();
@@ -1868,8 +1869,17 @@ function DashboardScreen({
     const items = userComps.filter((c) => c.domain === d);
     const avgCurrent = items.length ? items.reduce((acc, c) => acc + c.currentLevel, 0) / items.length : 2;
     const avgReq = items.length ? items.reduce((acc, c) => acc + c.requiredLevel, 0) / items.length : 3;
+    const localizedDomain =
+      d === "Statistical"
+        ? (lang === "HI" ? "सांख्यिकी" : lang === "TE" ? "గణాంకాలు" : "Statistical")
+        : d === "Technical"
+        ? (lang === "HI" ? "तकनीकी" : lang === "TE" ? "సాంకేతిక" : "Technical")
+        : d === "Digital Governance"
+        ? (lang === "HI" ? "डिजिटल" : lang === "TE" ? "డిజిటల్" : "Governance")
+        : (lang === "HI" ? "व्यवहार" : lang === "TE" ? "నాయకత్వం" : "Leadership");
+
     return {
-      domain: d,
+      domain: localizedDomain,
       Current: Number(avgCurrent.toFixed(1)),
       Required: Number(avgReq.toFixed(1)),
     };
@@ -1887,7 +1897,7 @@ function DashboardScreen({
   const highPriorityGapsCount = userComps.filter((c) => c.gap > 0 && c.priorityLevel === "High").length;
 
   return (
-    <div className="flex flex-col gap-6 max-w-7xl mx-auto">
+    <div className="flex flex-col gap-6 max-w-7xl mx-auto font-sans">
       {/* Officer Cadre Banner */}
       <div className="bg-gradient-to-r from-[#1864A6] via-[#0B3D66] to-[#FF7A00] rounded-3xl p-6 md:p-8 text-white shadow-xl border border-white/15 flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-2xl pointer-events-none" />
@@ -1907,11 +1917,11 @@ function DashboardScreen({
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold font-serif tracking-tight">
-            Welcome back, {profile.name}
+            {t("dash_welcome")}, {profile.name}
           </h1>
 
           <p className="text-xs text-blue-100 max-w-xl leading-relaxed">
-            {profile.designation} · {profile.department}. Your closed-loop competency index is currently at <strong>{overallCompPct}%</strong> with {activeGapsCount} active learning deficits to close.
+            {profile.designation} · {profile.department}. {t("dash_cadre_index")}: <strong>{overallCompPct}%</strong> ({activeGapsCount} {t("dash_active_gaps").toLowerCase()}).
           </p>
         </div>
 
@@ -1921,19 +1931,19 @@ function DashboardScreen({
             onClick={() => onNav("assessment")}
             className="px-4 py-2.5 bg-[#FF7A00] hover:bg-[#e06a00] text-white text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
           >
-            <span>✍️ Assess Skills</span>
+            <span>✍️ {t("btn_take_assessment")}</span>
           </button>
           <button
             onClick={() => onNav("assistant")}
             className="px-4 py-2.5 bg-white text-[#0B3D66] hover:bg-gray-100 text-xs font-bold rounded-xl shadow-md transition-all cursor-pointer flex items-center gap-1.5"
           >
-            <span>🤖 AI Copilot</span>
+            <span>🤖 {t("nav_assistant")}</span>
           </button>
           <button
             onClick={() => onNav("labs")}
             className="px-3.5 py-2.5 bg-white/15 hover:bg-white/25 text-white border border-white/20 text-xs font-bold rounded-xl backdrop-blur-md transition-all cursor-pointer"
           >
-            <span>🧪 Labs</span>
+            <span>🧪 {t("nav_virtual_labs")}</span>
           </button>
         </div>
       </div>
@@ -1941,10 +1951,10 @@ function DashboardScreen({
       {/* Top 4 Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: "Overall Competency", value: `${overallCompPct}%`, sub: "Cadre Proficiency Index", color: "#0B3D66", badge: "Live Score", badgeColor: "bg-blue-100 text-blue-800", icon: "📊" },
-          { label: "Active Skill Gaps", value: `${activeGapsCount}`, sub: `${highPriorityGapsCount} High Priority Deficits`, color: "#FF7A00", badge: "Deficits", badgeColor: "bg-orange-100 text-orange-800", icon: "⚖️" },
-          { label: "Courses Completed", value: `${profile.coursesCompleted}`, sub: "NSSTA & iGOT Modules", color: "#10B981", badge: "Accredited", badgeColor: "bg-emerald-100 text-emerald-800", icon: "🎓" },
-          { label: "Learning Hours", value: `${profile.learningHours}h`, sub: "Annual CPD Quota: 50h", color: "#8B5CF6", badge: "DoPT Target", badgeColor: "bg-purple-100 text-purple-800", icon: "⏱️" },
+          { label: t("dash_overall_comp"), value: `${overallCompPct}%`, sub: t("dash_cadre_index"), color: "#0B3D66", badge: "Live Score", badgeColor: "bg-blue-100 text-blue-800", icon: "📊" },
+          { label: t("dash_active_gaps"), value: `${activeGapsCount}`, sub: `${highPriorityGapsCount} ${t("dash_high_priority_deficits")}`, color: "#FF7A00", badge: "Deficits", badgeColor: "bg-orange-100 text-orange-800", icon: "⚖️" },
+          { label: t("dash_courses_completed"), value: `${profile.coursesCompleted}`, sub: "NSSTA & iGOT Modules", color: "#10B981", badge: "Accredited", badgeColor: "bg-emerald-100 text-emerald-800", icon: "🎓" },
+          { label: t("dash_learning_hours"), value: `${profile.learningHours}h`, sub: "Annual CPD Quota: 50h", color: "#8B5CF6", badge: "DoPT Target", badgeColor: "bg-purple-100 text-purple-800", icon: "⏱️" },
         ].map((m) => (
           <div key={m.label} className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
             <div className="flex items-center justify-between">
@@ -1966,10 +1976,10 @@ function DashboardScreen({
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <div className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">Competency Radar Overview</div>
+              <div className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">{t("dash_radar_title")}</div>
               <span className="text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded-md font-semibold">4 Domains</span>
             </div>
-            <div className="text-[11px] text-gray-400 mb-2">Current Proficiency vs MoSPI Cadre Benchmark</div>
+            <div className="text-[11px] text-gray-400 mb-2">{t("dash_radar_sub")}</div>
             <ResponsiveContainer width="100%" height={210}>
               <RadarChart data={radarData}>
                 <PolarGrid stroke="#e2e8f0" />
@@ -1980,8 +1990,8 @@ function DashboardScreen({
             </ResponsiveContainer>
           </div>
           <div className="flex justify-center gap-4 text-[10px] text-gray-500 mt-2 border-t border-gray-100 pt-3">
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FF7A00]" /> Current Level</span>
-            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-300" /> Cadre Target</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-[#FF7A00]" /> {t("dash_current_level")}</span>
+            <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-slate-300" /> {t("dash_cadre_target")}</span>
           </div>
         </div>
 
@@ -1989,9 +1999,9 @@ function DashboardScreen({
         <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-1">
-              <div className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">Priority Skill Gaps</div>
+              <div className="text-xs font-bold text-[#0B3D66] uppercase tracking-wider">{t("nav_skill_gaps")}</div>
               <button onClick={() => onNav("skill_gaps")} className="text-[10px] text-[#FF7A00] font-bold hover:underline cursor-pointer">
-                View Full Matrix →
+                {t("dash_view_full_matrix")}
               </button>
             </div>
             <div className="text-[11px] text-gray-400 mb-3">Formula: 35% Gap + 25% Role + 20% Dept + 10% Demand</div>
@@ -2123,6 +2133,7 @@ function AssessmentScreen({
 }: {
   onFinish: (qList: GeneratedQuestion[], aList: (number | null)[], domain: string) => void;
 }) {
+  const { t, lang } = useLanguage();
   const profile = getProfile();
   const [started, setStarted] = useState(false);
   const [questions, setQuestions] = useState<GeneratedQuestion[]>([]);
@@ -2138,36 +2149,36 @@ function AssessmentScreen({
   const domainsList = [
     {
       id: "All Domains (Comprehensive)",
-      title: "Comprehensive Cadre Assessment",
-      desc: "Holistic evaluation across Statistical, Technical, Digital Governance, and Behavioural domains.",
+      title: lang === "HI" ? "समग्र संवर्ग मूल्यांकन" : lang === "TE" ? "సమగ్ర కేడర్ మూల్యాంకనం" : "Comprehensive Cadre Assessment",
+      desc: lang === "HI" ? "सांख्यिकीय, तकनीकी, डिजिटल प्रशासन और व्यावहारिक डोमेन में मूल्यांकन।" : lang === "TE" ? "గణాంక, సాంకేతిక, డిజిటల్ మరియు ప్రవర్తనా విభాగాల సమగ్ర మూల్యాంకనం." : "Holistic evaluation across Statistical, Technical, Digital Governance, and Behavioural domains.",
       icon: "🏛️",
       accent: "from-blue-600 to-indigo-700",
     },
     {
       id: "Statistical",
-      title: "Statistical Methodologies",
-      desc: "SNA 2008 GVA, Two-Stage PLFS Sampling, CPI/WPI Compilation, and SDG Indicators.",
+      title: lang === "HI" ? "सांख्यिकीय पद्धतियाँ" : lang === "TE" ? "గణాంక పద్ధతులు" : "Statistical Methodologies",
+      desc: lang === "HI" ? "राष्ट्रीय लेखा एसएनए 2008, पीएलएफएस प्रतिचयन, सीपीआई/डब्ल्यूपीआई संकलन।" : lang === "TE" ? "SNA 2008 GVA, PLFS శాంప్లింగ్, CPI/WPI సూచీలు." : "SNA 2008 GVA, Two-Stage PLFS Sampling, CPI/WPI Compilation, and SDG Indicators.",
       icon: "📊",
       accent: "from-emerald-600 to-teal-700",
     },
     {
       id: "Technical",
-      title: "Data Science & Computing",
-      desc: "Python/R Microdata Parsing, Multipliers, SQLite Data Warehouses, and QGIS.",
+      title: lang === "HI" ? "डेटा विज्ञान एवं कम्प्यूटिंग" : lang === "TE" ? "డేటా సైన్స్ మరియు కంప్యూటింగ్" : "Data Science & Computing",
+      desc: lang === "HI" ? "पायथन, आर, एसक्यूएल डेटा वेयरहाउस और क्यूजीआईएस।" : lang === "TE" ? "పైథాన్, ఆర్, SQL మరియు QGIS మ్యాపింగ్." : "Python/R Microdata Parsing, Multipliers, SQLite Data Warehouses, and QGIS.",
       icon: "💻",
       accent: "from-purple-600 to-indigo-700",
     },
     {
       id: "Digital Governance",
-      title: "Digital Governance & Privacy",
-      desc: "DPDP Act 2023, Statistical Disclosure Control, and Cybersecurity protocols.",
+      title: lang === "HI" ? "डिजिटल प्रशासन एवं गोपनीयता" : lang === "TE" ? "డిజిటల్ పాలన మరియు గోప్యత" : "Digital Governance & Privacy",
+      desc: lang === "HI" ? "डीपीडीपी अधिनियम 2023, सांख्यिकीय प्रकटीकरण नियंत्रण।" : lang === "TE" ? "DPDP చట్టం 2023, డేటా గోప్యతా నియమాలు." : "DPDP Act 2023, Statistical Disclosure Control, and Cybersecurity protocols.",
       icon: "🔒",
       accent: "from-amber-500 to-orange-600",
     },
     {
       id: "Behavioural",
-      title: "Ethics & Public Policy",
-      desc: "UNFPOS Principles, Executive Leadership, and Evidence-Based Policy Making.",
+      title: lang === "HI" ? "नीतिशास्त्र एवं लोक नीति" : lang === "TE" ? "నైతికత మరియు ప్రజా విధానం" : "Ethics & Public Policy",
+      desc: lang === "HI" ? "संयुक्त राष्ट्र मौलिक सिद्धांत (UNFPOS), प्रशासनिक नेतृत्व।" : lang === "TE" ? "UNFPOS సూత్రాలు, నాయకత్వ నైపుణ్యాలు." : "UNFPOS Principles, Executive Leadership, and Evidence-Based Policy Making.",
       icon: "⚖️",
       accent: "from-rose-600 to-pink-700",
     },
@@ -4086,6 +4097,7 @@ function ResourcesScreen({ onNav }: { onNav: (s: Screen) => void }) {
 // ──────────────────────────────────────────────
 
 function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
+  const { t, lang } = useLanguage();
   const profile = getProfile();
   const userComps = getUserCompetencies();
   const gaps = userComps.filter((c) => c.gap > 0).map((c) => c.competencyName);
@@ -4094,7 +4106,11 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
   const [messages, setMessages] = useState<{ role: "user" | "assistant"; text: string; action?: "assess" | "gap" | "learn" | "elevate" }[]>([
     {
       role: "assistant",
-      text: `Namaste **${profile.name || "Officer"}**! I am your **StatSkill AI Closed-Loop Copilot**.\n\nI am synchronized with your **${profile.cadreGrade || "STS"}** competency benchmarks and the **MoSPI Capacity Ledger**. How would you like to advance your official statistical proficiency today?`,
+      text: lang === "HI"
+        ? `नमस्ते **${profile.name || "अधिकारी"}**! मैं आपका **स्टेटस्किल एआई सांख्यिकी सहायक** हूँ।\n\nमैं आपके **${profile.cadreGrade || "STS"}** दक्षता मानकों और **मंत्रालय क्षमता लेजर** से पूरी तरह सिंक हूँ। आज आप अपनी सांख्यिकीय प्रवीणता कैसे बढ़ाना चाहते हैं?`
+        : lang === "TE"
+        ? `నమస్కారం **${profile.name || "అధికారి"}**! నేను మీ **స్టాట్‌స్కిల్ AI గణాంక సహాయకుడిని**.\n\nనేను మీ **${profile.cadreGrade || "STS"}** నైపుణ్య ప్రమాణాలు మరియు **మంత్రిత్వ శాఖ లెడ్జర్**తో అనుసంధానించబడి ఉన్నాను. ఈ రోజు మీ గణాంక నైపుణ్యాలను ఎలా మెరుగుపరచుకోవాలనుకుంటున్నారు?`
+        : `Namaste **${profile.name || "Officer"}**! I am your **StatSkill AI Closed-Loop Copilot**.\n\nI am synchronized with your **${profile.cadreGrade || "STS"}** competency benchmarks and the **MoSPI Capacity Ledger**. How would you like to advance your official statistical proficiency today?`,
     },
   ]);
   const [input, setInput] = useState("");
@@ -4135,7 +4151,7 @@ function AssistantScreen({ onNav }: { onNav?: (s: Screen) => void }) {
 
     try {
       const recognition = new SpeechRec();
-      recognition.lang = "en-IN";
+      recognition.lang = lang === "HI" ? "hi-IN" : lang === "TE" ? "te-IN" : "en-IN";
       recognition.interimResults = false;
       recognition.maxAlternatives = 1;
 
@@ -4177,8 +4193,8 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
     {
       id: "assess" as const,
       num: "1",
-      title: "Assess",
-      subtitle: "Diagnostic Micro-Quiz",
+      title: lang === "HI" ? "मूल्यांकन" : lang === "TE" ? "మూల్యాంకనం" : "Assess",
+      subtitle: lang === "HI" ? "नैदानिक प्रश्नोत्तरी" : lang === "TE" ? "డయాగ్నస్టిక్ క్విజ్" : "Diagnostic Micro-Quiz",
       icon: "✍️",
       color: "from-blue-600 to-indigo-600",
       accent: "border-blue-300 text-blue-800 bg-blue-50/50",
@@ -4191,8 +4207,8 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
     {
       id: "gap" as const,
       num: "2",
-      title: "Diagnose Gaps",
-      subtitle: "Priority Deficits",
+      title: lang === "HI" ? "अंतराल निदान" : lang === "TE" ? "లోపాల గుర్తింపు" : "Diagnose Gaps",
+      subtitle: lang === "HI" ? "प्राथमिकता कमियां" : lang === "TE" ? "ప్రాధాన్యతా లోపాలు" : "Priority Deficits",
       icon: "⚖️",
       color: "from-amber-500 to-orange-600",
       accent: "border-amber-300 text-amber-800 bg-amber-50/50",
@@ -4205,8 +4221,8 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
     {
       id: "learn" as const,
       num: "3",
-      title: "Learn Pathways",
-      subtitle: "Curated Syllabi & Docs",
+      title: lang === "HI" ? "शिक्षण पथ" : lang === "TE" ? "అభ్యాస మార్గం" : "Learn Pathways",
+      subtitle: lang === "HI" ? "अनुशंसित पाठ्यक्रम" : lang === "TE" ? "సిఫార్సు కోర్సులు" : "Curated Syllabi & Docs",
       icon: "📖",
       color: "from-purple-600 to-indigo-700",
       accent: "border-purple-300 text-purple-800 bg-purple-50/50",
@@ -4219,8 +4235,8 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
     {
       id: "elevate" as const,
       num: "4",
-      title: "Elevate Level",
-      subtitle: "Verify & Upgrade",
+      title: lang === "HI" ? "स्तर पदोन्नति" : lang === "TE" ? "స్థాయి పెంపు" : "Elevate Level",
+      subtitle: lang === "HI" ? "सत्यापन एवं अपग्रेड" : lang === "TE" ? "ధృవీకరణ మరియు అప్‌గ్రేడ్" : "Verify & Upgrade",
       icon: "⚡",
       color: "from-emerald-500 to-teal-600",
       accent: "border-emerald-300 text-emerald-800 bg-emerald-50/50",
@@ -4247,6 +4263,7 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
           designation: profile.designation,
           department: profile.department,
           gaps: gaps,
+          lang: lang,
         }
       );
       setMessages((prev) => [...prev, { role: "assistant", text: reply.text }]);
@@ -4255,7 +4272,11 @@ ${messages.map((m) => `### **${m.role === "user" ? "👤 Officer" : "🤖 StatSk
         ...prev,
         {
           role: "assistant",
-          text: "I am ready to assist with the **Assess → Gap → Learn → Elevate** cycle. Try asking for an assessment quiz, gap diagnosis, or course recommendation.",
+          text: lang === "HI"
+            ? "मैं **मूल्यांकन → अंतराल निदान → शिक्षण → स्तर पदोन्नति** चक्र में आपकी सहायता के लिए तैयार हूँ। कृपया प्रश्नोत्तरी या पाठ्यक्रम अनुशंसा पूछें।"
+            : lang === "TE"
+            ? "నేను **మూల్యాంకనం → లోపాల గుర్తింపు → అభ్యాసం → స్థాయి పెంపు** ప్రక్రియలో మీకు సహాయం చేయడానికి సిద్ధంగా ఉన్నాను. దయచేసి ఏదైనా గణాంక ప్రశ్న లేదా కోర్సు సిఫార్సు అడగండి."
+            : "I am ready to assist with the **Assess → Gap → Learn → Elevate** cycle. Try asking for an assessment quiz, gap diagnosis, or course recommendation.",
         },
       ]);
     } finally {
